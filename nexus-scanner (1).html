@@ -1,0 +1,3270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#060a0e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEXUS">
+<meta name="description" content="NEXUS Scanner — BLE, WiFi, QR, Sensors, TV Remote">
+<title>NEXUS SCANNER</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Orbitron:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================
+   NEXUS SCANNER — style.css
+   =========================== */
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Orbitron:wght@400;600;700&display=swap');
+
+/* ── Variables ───────────────────────────────── */
+:root {
+  --bg:     #060a0e;
+  --bg2:    #0b1118;
+  --bg3:    #111c1a;
+  --fg:     #d4eedd;
+  --accent: #00ff88;
+  --blue:   #00cfff;
+  --orange: #ff8c00;
+  --red:    #ff3355;
+  --yellow: #ffdd00;
+  --mid:    #4a7060;
+  --dim:    #162018;
+  --dim2:   #1e2e25;
+  --border: #253530;
+  --card:   #0c1812;
+  --glow:   rgba(0,255,136,0.25);
+  --glow-b: rgba(0,207,255,0.25);
+  --r:      3px;
+  --mono:   'Share Tech Mono', monospace;
+  --pixel:  'Orbitron', sans-serif;
+  --vt:     'VT323', monospace;
+}
+
+/* ── Reset ───────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  position: relative;
+}
+
+/* Scanlines */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 3px,
+    rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px
+  );
+  pointer-events: none;
+  z-index: 9990;
+}
+
+/* ── Boot Screen ─────────────────────────────── */
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: bootFadeIn .3s ease;
+}
+@keyframes bootFadeIn { from { opacity:0 } to { opacity:1 } }
+
+.boot-inner {
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.boot-logo {
+  font-family: var(--pixel);
+  font-size: clamp(36px, 12vw, 60px);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 8px;
+  text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0,255,136,0.3);
+  animation: glitch 3s infinite;
+  margin-bottom: 4px;
+}
+.boot-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mid);
+  letter-spacing: 3px;
+  margin-bottom: 24px;
+}
+.boot-lines {
+  font-family: var(--vt);
+  font-size: 15px;
+  color: var(--accent);
+  min-height: 100px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+.boot-line { color: var(--mid); }
+.boot-line.ok { color: var(--accent); }
+.boot-line.err { color: var(--red); }
+.boot-bar-wrap {
+  height: 4px;
+  background: var(--dim2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.boot-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--accent));
+  width: 0%;
+  border-radius: 2px;
+  transition: width 0.1s ease;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* ── Header ──────────────────────────────────── */
+.hdr {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 100;
+}
+.hdr::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, var(--blue) 70%, transparent);
+  opacity: .5;
+}
+.hdr-logo { display:flex; align-items:center; gap: 6px; }
+.hdr-logo-n {
+  font-family: var(--pixel);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px var(--glow);
+}
+.hdr-logo-s {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--mid);
+  letter-spacing: 2px;
+}
+.hdr-r { display:flex; align-items:center; gap: 10px; }
+
+/* Signal bars */
+.sig-wrap { display:flex; align-items:flex-end; gap: 2px; height: 14px; }
+.sig-b {
+  width: 3px;
+  background: var(--border);
+  border-radius: 1px;
+  transition: background .3s;
+}
+.b1 { height: 4px; } .b2 { height: 7px; } .b3 { height: 10px; } .b4 { height: 13px; }
+.sig-b.on { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+
+/* Battery */
+.bat-wrap { display:flex; align-items:center; }
+.bat-b {
+  width: 24px; height: 11px;
+  border: 1.5px solid var(--mid);
+  border-radius: 2px;
+  padding: 1.5px;
+  position: relative;
+  display:flex; align-items:center;
+}
+.bat-b::after {
+  content:'';
+  position:absolute; right:-4px; top:50%;
+  transform:translateY(-50%);
+  width:3px; height:5px;
+  background: var(--mid);
+  border-radius:0 1px 1px 0;
+}
+.bat-f { height:100%; background:var(--accent); border-radius:1px; transition:width .5s; }
+
+/* Clock */
+.clk { font-family:var(--vt); font-size:18px; color:var(--blue); letter-spacing:1px; min-width:40px; }
+
+/* ── Tabs ────────────────────────────────────── */
+.tabs {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--mid);
+  padding: 7px 2px 6px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: color .15s, background .15s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.tab:last-child { border-right: none; }
+.tab-dot {
+  position: absolute;
+  top: 4px; right: 5px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: none;
+  box-shadow: 0 0 6px var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.tab.scanning .tab-dot { display: block; }
+.tab-icon { font-size: 14px; line-height: 1; }
+.tab-label { font-family: var(--pixel); font-size: 5px; letter-spacing: 1px; }
+.tab:hover { color: var(--fg); background: rgba(0,255,136,.04); }
+.tab.active {
+  color: var(--accent);
+  background: rgba(0,255,136,.07);
+}
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* ── Panels ──────────────────────────────────── */
+.panels { flex:1; overflow:hidden; }
+.panel { display:none; height:100%; flex-direction:column; overflow:hidden; }
+.panel.active { display:flex; }
+
+/* ── Action Bar ──────────────────────────────── */
+.abar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.abar::-webkit-scrollbar { display: none; }
+
+/* Big scan button */
+.btn-scan {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: 1px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 9px 14px;
+  cursor: pointer;
+  border-radius: var(--r);
+  white-space: nowrap;
+  box-shadow: 0 0 14px rgba(0,255,136,.35), 0 2px 6px rgba(0,0,0,.5);
+  transition: box-shadow .15s, transform .1s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-scan::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+.btn-scan:hover { box-shadow: 0 0 22px rgba(0,255,136,.55), 0 2px 6px rgba(0,0,0,.5); }
+.btn-scan:active { transform: scale(.96); }
+
+.btn-scan.btn-stop {
+  background: var(--dim2);
+  color: var(--yellow);
+  box-shadow: 0 0 10px rgba(255,221,0,.2);
+  animation: stopPulse 1s steps(2) infinite;
+}
+.btn-scan.btn-stop:hover { box-shadow: 0 0 18px rgba(255,221,0,.4); }
+@keyframes stopPulse { 0%,100%{opacity:1} 50%{opacity:.8} }
+
+.btn-icon { font-size: 12px; }
+.btn-text { }
+
+/* Small button */
+.btn-sm {
+  flex-shrink: 0;
+  font-family: var(--pixel);
+  font-size: 5px;
+  letter-spacing: 1px;
+  background: transparent;
+  color: var(--mid);
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  cursor: pointer;
+  border-radius: var(--r);
+  white-space: nowrap;
+  transition: all .15s;
+  height: 34px;
+}
+.btn-sm:hover { color: var(--fg); border-color: var(--mid); }
+.btn-sm:active { background: var(--dim); }
+
+/* Status strip */
+.sstrip {
+  flex: 1;
+  font-family: var(--vt);
+  font-size: 14px;
+  color: var(--mid);
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.sstrip.ok  { color: var(--accent); }
+.sstrip.err { color: var(--red); }
+.sstrip.busy { color: var(--yellow); animation: textBlink .8s steps(2) infinite; }
+@keyframes textBlink { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+/* ── Notice banner ───────────────────────────── */
+.notice {
+  flex-shrink: 0;
+  background: rgba(0,207,255,.06);
+  border-left: 3px solid var(--blue);
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(0,207,255,.7);
+  line-height: 1.5;
+}
+
+/* ── Warning bar ─────────────────────────────── */
+.warnb {
+  flex-shrink: 0;
+  border-left: 3px solid var(--yellow);
+  margin: 6px 10px;
+  padding: 6px 10px;
+  font-family: var(--vt);
+  font-size: 14px;
+  color: var(--yellow);
+  background: rgba(255,221,0,.05);
+  border-radius: var(--r);
+  display: none;
+  line-height: 1.5;
+}
+.warnb.show { display: block; }
+
+/* ── Progress bar ────────────────────────────── */
+.prog-wrap {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.prog-label {
+  font-family: var(--pixel);
+  font-size: 5px;
+  color: var(--mid);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.prog-bg {
+  height: 5px;
+  background: var(--dim2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--accent));
+  border-radius: 2px;
+  width: 0%;
+  transition: width .1s;
+  box-shadow: 0 0 6px var(--accent);
+}
+
+/* ── Section Header ──────────────────────────── */
+.shdr {
+  flex-shrink: 0;
+  background: var(--dim);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--pixel);
+  font-size: 5px;
+  padding: 5px 10px;
+  letter-spacing: 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--mid);
+}
+.shdr-cnt { font-family: var(--vt); font-size: 18px; color: var(--accent); }
+
+/* ── Scroll Area ─────────────────────────────── */
+.sa {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.sa::-webkit-scrollbar { width: 3px; }
+.sa::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Log ─────────────────────────────────────── */
+.logb {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  height: 56px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  padding: 3px 8px;
+  background: var(--bg);
+}
+.logb::-webkit-scrollbar { display: none; }
+.lr { display:flex; gap:8px; font-family:var(--vt); font-size:13px; line-height:1.5; }
+.lt { color:var(--dim2); flex-shrink:0; width:54px; border-right:1px solid var(--dim); padding-right:4px; }
+.lm { color:var(--mid); }
+.lm.ok { color:var(--accent); }
+.lm.e  { color:var(--red); }
+.lm.w  { color:var(--yellow); }
+.lm.d  { color:var(--blue); }
+
+/* ── Cards ───────────────────────────────────── */
+.card {
+  border-bottom: 1px solid var(--border);
+  padding: 9px 10px;
+  background: var(--card);
+  animation: cardIn .15s ease-out;
+  transition: background .15s;
+}
+.card:hover { background: var(--dim); }
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.ctitle {
+  font-family: var(--pixel);
+  font-size: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.cname { color:var(--accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.badge {
+  font-family: var(--pixel);
+  font-size: 4px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.badge-g { background:rgba(0,255,136,.14); color:var(--accent); border:1px solid rgba(0,255,136,.3); }
+.badge-b { background:rgba(0,207,255,.14); color:var(--blue);   border:1px solid rgba(0,207,255,.3); }
+.badge-o { background:rgba(255,140,0,.14);  color:var(--orange); border:1px solid rgba(255,140,0,.3); }
+.badge-r { background:rgba(255,51,85,.14);  color:var(--red);    border:1px solid rgba(255,51,85,.3); }
+.badge-d { background:transparent; color:var(--mid); border:1px solid var(--border); }
+.kv { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px; gap:8px; }
+.kv:last-child { margin-bottom:0; }
+.k { font-family:var(--pixel); font-size:4px; color:var(--mid); flex-shrink:0; }
+.v { font-family:var(--vt); font-size:14px; color:var(--fg); text-align:right; word-break:break-all; line-height:1.2; }
+.v.hi  { color:var(--accent); }
+.v.lo  { color:var(--mid); }
+.v.sm  { font-size:11px; letter-spacing:.3px; }
+.v.err { color:var(--red); }
+.pdiv  { height:1px; background:var(--border); margin:5px 0; }
+.empty {
+  font-family: var(--vt);
+  font-size: 16px;
+  color: var(--border);
+  text-align: center;
+  padding: 30px 12px;
+  letter-spacing: 1px;
+  line-height: 2;
+}
+.empty-icon { font-size:32px; display:block; margin-bottom:8px; opacity:.5; }
+.empty-hint  { font-size:13px; color:var(--dim2); display:block; }
+
+/* ── TV Brand pill ───────────────────────────── */
+.tv-brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,140,0,.12);
+  border: 1px solid rgba(255,140,0,.3);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-family: var(--pixel);
+  font-size: 4px;
+  color: var(--orange);
+  margin-top: 4px;
+}
+.use-tv-btn {
+  font-family: var(--pixel);
+  font-size: 4px;
+  background: var(--blue);
+  color: var(--bg);
+  border: none;
+  padding: 3px 7px;
+  cursor: pointer;
+  border-radius: 2px;
+  margin-top: 6px;
+  letter-spacing: 1px;
+  width: 100%;
+  transition: box-shadow .15s;
+}
+.use-tv-btn:hover { box-shadow: 0 0 10px var(--glow-b); }
+
+/* ── Camera / QR ─────────────────────────────── */
+.camw {
+  flex-shrink: 0;
+  position: relative;
+  background: #000;
+  border-bottom: 1px solid var(--accent);
+  display: none;
+  max-height: 220px;
+  overflow: hidden;
+}
+.camw video { width:100%; display:block; max-height:220px; object-fit:cover; }
+.cam-overlay { position:absolute; inset:0; pointer-events:none; }
+.cam-corner {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-color: var(--accent);
+  border-style: solid;
+}
+.tl { top:8px; left:8px;  border-width:2px 0 0 2px; }
+.tr { top:8px; right:8px; border-width:2px 2px 0 0; }
+.bl { bottom:8px; left:8px;  border-width:0 0 2px 2px; }
+.br { bottom:8px; right:8px; border-width:0 2px 2px 0; }
+.cam-scanline {
+  position: absolute;
+  left: 8px; right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: scanlineMove 2s linear infinite;
+}
+@keyframes scanlineMove {
+  0%   { top: 8px; }
+  50%  { top: calc(100% - 8px); }
+  100% { top: 8px; }
+}
+.cam-target {
+  position: absolute;
+  top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  width: 60px; height: 60px;
+  border: 1px solid rgba(0,255,136,.3);
+  border-radius: 50%;
+  animation: targetPulse 2s ease-in-out infinite;
+}
+@keyframes targetPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.3} 50%{transform:translate(-50%,-50%) scale(1.1);opacity:.7} }
+.qrr { border-bottom:1px solid var(--border); padding:8px 10px; animation:cardIn .15s; background:var(--card); }
+.qrfmt { font-family:var(--pixel); font-size:4.5px; color:var(--blue); margin-bottom:3px; letter-spacing:1px; }
+.qrval { font-family:var(--vt); font-size:16px; color:var(--fg); word-break:break-all; line-height:1.4; }
+.qrval a { color:var(--accent); }
+
+/* ── Sensor / Compass ────────────────────────── */
+.sub-tabs {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.sub-tab {
+  flex: 1;
+  font-family: var(--pixel);
+  font-size: 5px;
+  letter-spacing: 1px;
+  background: transparent;
+  color: var(--mid);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sub-tab:last-child { border-right: none; }
+.sub-tab:hover { color: var(--fg); background: rgba(0,255,136,.03); }
+.sub-tab.active { color: var(--accent); background: rgba(0,255,136,.06); }
+
+.sub-panel { display:none; flex:1; flex-direction:column; overflow-y:auto; scrollbar-width:none; }
+.sub-panel::-webkit-scrollbar { display:none; }
+.sub-panel.active { display:flex; }
+
+/* Compass */
+.compass-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+#compassCanvas { display:block; }
+.compass-info {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.compass-deg { font-family:var(--pixel); font-size:clamp(22px,6vw,32px); color:var(--accent); letter-spacing:3px; text-shadow:0 0 16px var(--glow); }
+.compass-dir { font-family:var(--pixel); font-size:20px; color:var(--fg); letter-spacing:2px; }
+
+/* Magnetometer */
+.mag-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 10px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.mag-num {
+  font-family: var(--pixel);
+  font-size: clamp(24px,7vw,38px);
+  color: var(--accent);
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px var(--glow);
+}
+.mag-num.hi { color:var(--red); text-shadow:0 0 20px rgba(255,51,85,.5); animation:numBlink .25s steps(1) infinite; }
+@keyframes numBlink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.mag-unit { font-family:var(--pixel); font-size:8px; color:var(--mid); padding-bottom:4px; }
+.mag-alert {
+  flex-shrink: 0;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--pixel);
+  font-size: 6px;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 8px;
+  display: none;
+  animation: alertBlink .35s steps(1) infinite;
+}
+@keyframes alertBlink { 0%,100%{background:var(--red)} 50%{background:rgba(255,51,85,.2);color:var(--red);border:1px solid var(--red)} }
+
+.ax-wrap { flex-shrink:0; padding:8px 10px; background:var(--bg2); border-bottom:1px solid var(--border); }
+.ax-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.ax-row:last-child { margin-bottom:0; }
+.ax-lbl { font-family:var(--pixel); font-size:7px; width:16px; flex-shrink:0; color:var(--mid); }
+.ax-track { flex:1; height:6px; background:var(--dim); border-radius:2px; position:relative; overflow:hidden; }
+.ax-fill  { position:absolute; left:0; top:0; bottom:0; border-radius:2px; background:linear-gradient(90deg,var(--blue),var(--accent)); max-width:100%; transition:width .1s; }
+.ax-fill.ax-red   { background:linear-gradient(90deg,#ff3355,#ff8c00); }
+.ax-fill.ax-green { background:linear-gradient(90deg,#00cc55,#00ff88); }
+.ax-fill.ax-blue  { background:linear-gradient(90deg,#0055ff,#00cfff); }
+.ax-val { font-family:var(--vt); font-size:14px; width:56px; text-align:right; flex-shrink:0; }
+
+.hist-wrap { flex-shrink:0; padding:6px 10px; border-bottom:1px solid var(--border); }
+.hist-label { font-family:var(--pixel); font-size:4.5px; color:var(--mid); margin-bottom:4px; }
+.hist-bars { display:flex; align-items:flex-end; gap:1px; height:34px; }
+.hist-bar { flex:1; min-width:2px; border-radius:1px 1px 0 0; background:var(--dim); transition:height .08s, background .08s; }
+
+/* Motion ball */
+.motion-ball-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+.motion-ball-bg {
+  width: 120px; height: 120px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  position: relative;
+  background: radial-gradient(circle at 50% 50%, var(--dim) 0%, var(--bg) 100%);
+  flex-shrink: 0;
+}
+.motion-cross-h, .motion-cross-v {
+  position: absolute;
+  background: var(--border);
+}
+.motion-cross-h { top:50%; left:10%; right:10%; height:1px; transform:translateY(-50%); }
+.motion-cross-v { left:50%; top:10%; bottom:10%; width:1px; transform:translateX(-50%); }
+.motion-ball {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--blue), var(--accent));
+  box-shadow: 0 0 10px var(--glow);
+  top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  transition: left .15s, top .15s;
+}
+
+/* ── Audio / Spectrum ────────────────────────── */
+.audio-stats {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.astat {
+  background: var(--bg2);
+  padding: 6px 8px;
+  text-align: center;
+}
+.astat-lbl { font-family:var(--pixel); font-size:4px; color:var(--mid); letter-spacing:1px; margin-bottom:3px; }
+.astat-val { font-family:var(--vt); font-size:15px; color:var(--accent); line-height:1; }
+
+.db-meter-wrap {
+  flex-shrink: 0;
+  padding: 6px 10px 4px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.db-meter-label { font-family:var(--pixel); font-size:5px; color:var(--mid); flex-shrink:0; }
+.db-meter-bg {
+  flex: 1;
+  height: 10px;
+  background: var(--dim);
+  border-radius: 2px;
+  overflow: visible;
+  position: relative;
+}
+.db-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--yellow) 70%, var(--red) 100%);
+  transition: width .05s;
+}
+.db-meter-peak {
+  position: absolute;
+  top: -2px; bottom: -2px;
+  width: 2px;
+  background: var(--yellow);
+  border-radius: 1px;
+  left: 0%;
+  transition: left .2s;
+}
+.db-meter-scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--border);
+  padding: 2px 0 0;
+  width: calc(100% - 36px);
+  margin-left: 30px;
+}
+
+#audioCanvas, #waterfallCanvas {
+  flex-shrink: 0;
+  width: 100%;
+  display: block;
+  background: #000;
+}
+#audioCanvas { height: 120px; border-bottom: 1px solid var(--border); }
+#waterfallCanvas { flex: 1; min-height: 60px; }
+
+/* ── TV Remote ───────────────────────────────── */
+.tv-setup {
+  flex-shrink: 0;
+  padding: 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.tv-proto-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.proto-btn {
+  font-family: var(--pixel);
+  font-size: 4.5px;
+  letter-spacing: 1px;
+  background: transparent;
+  color: var(--mid);
+  border: 1px solid var(--border);
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .15s;
+}
+.proto-btn:hover { color:var(--fg); border-color:var(--mid); }
+.proto-btn.active {
+  background: rgba(0,207,255,.12);
+  color: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 8px rgba(0,207,255,.2);
+}
+.tv-ip-row { display:flex; gap:6px; align-items:flex-end; margin-bottom:8px; }
+.tv-ip-field { flex:1; }
+.tv-ip-label { font-family:var(--pixel); font-size:4.5px; color:var(--mid); letter-spacing:1px; display:block; margin-bottom:4px; }
+.tv-ip-in {
+  font-family: var(--vt);
+  font-size: 18px;
+  background: var(--bg);
+  color: var(--blue);
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  width: 100%;
+  outline: none;
+  border-radius: var(--r);
+  letter-spacing: 1px;
+  transition: border-color .2s, box-shadow .2s;
+  caret-color: var(--accent);
+}
+.tv-ip-in:focus { border-color:var(--blue); box-shadow:0 0 0 1px rgba(0,207,255,.2); }
+.tv-ip-in.connected { border-color:var(--accent); color:var(--accent); }
+.tv-ip-in.error { border-color:var(--red); color:var(--red); }
+.btn-connect {
+  flex-shrink: 0;
+  font-family: var(--pixel);
+  font-size: 6px;
+  letter-spacing: 1px;
+  background: var(--blue);
+  color: var(--bg);
+  border: none;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-radius: var(--r);
+  transition: box-shadow .15s, transform .1s;
+  box-shadow: 0 0 12px rgba(0,207,255,.3);
+  white-space: nowrap;
+}
+.btn-connect:hover { box-shadow:0 0 20px rgba(0,207,255,.5); }
+.btn-connect:active { transform: scale(.97); }
+.btn-connect.connected { background:var(--accent); }
+.tv-status-row { display:flex; align-items:center; gap:8px; }
+.tv-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background .3s, box-shadow .3s;
+}
+.tv-dot.on  { background:var(--accent); box-shadow:0 0 8px var(--accent); animation: pulse 1.5s ease-in-out infinite; }
+.tv-dot.ok  { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+.tv-dot.err { background:var(--red);    box-shadow:0 0 8px var(--red); }
+.tv-status-txt { font-family:var(--vt); font-size:14px; color:var(--mid); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tv-status-txt.ok  { color:var(--accent); }
+.tv-status-txt.err { color:var(--red); }
+
+/* Remote controls */
+.remote-wrap {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 8px 10px 12px;
+  background: var(--bg);
+}
+.remote-wrap::-webkit-scrollbar { display:none; }
+.remote-brand {
+  font-family: var(--pixel);
+  font-size: 5.5px;
+  color: var(--mid);
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 6px 0;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.remote-section { margin-bottom: 8px; }
+.remote-sec-label {
+  font-family: var(--pixel);
+  font-size: 4px;
+  color: var(--border);
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+.remote-row { display:flex; gap:5px; justify-content:center; margin-bottom:5px; }
+.rkey {
+  flex: 1;
+  font-family: var(--pixel);
+  font-size: 5.5px;
+  letter-spacing: .5px;
+  line-height: 1.5;
+  background: var(--bg2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+  padding: 9px 5px;
+  border-radius: var(--r);
+  transition: all .1s;
+  -webkit-user-select: none;
+  user-select: none;
+  max-width: 100px;
+  position: relative;
+  overflow: hidden;
+}
+.rkey::after { content:''; position:absolute; inset:0; background:rgba(255,255,255,0); transition:background .1s; }
+.rkey:active, .rkey.pressed { transform:scale(.94); }
+.rkey:active::after, .rkey.pressed::after { background:rgba(255,255,255,.08); }
+
+.rkey-power { max-width:none; width:100%; background:rgba(255,51,85,.1); color:var(--red); border-color:rgba(255,51,85,.3); font-size:6.5px; padding:11px; }
+.rkey-power:active, .rkey-power.pressed { background:var(--red); color:#fff; border-color:var(--red); box-shadow:0 0 14px rgba(255,51,85,.5); }
+
+.rkey-nav { background:rgba(0,207,255,.06); border-color:rgba(0,207,255,.2); color:var(--blue); }
+.rkey-nav:active, .rkey-nav.pressed { background:var(--blue); color:var(--bg); border-color:var(--blue); box-shadow:0 0 10px var(--glow-b); }
+.rkey-nav-big { font-size:14px; }
+
+.rkey-ok { background:rgba(0,255,136,.1); color:var(--accent); border-color:rgba(0,255,136,.3); font-size:9px; max-width:70px; }
+.rkey-ok:active, .rkey-ok.pressed { background:var(--accent); color:var(--bg); box-shadow:0 0 14px var(--glow); }
+
+.rkey-func { background:var(--bg3); color:var(--mid); border-color:var(--border); }
+.rkey-func:active, .rkey-func.pressed { background:var(--dim); color:var(--fg); }
+
+.rkey-num { background:var(--bg3); color:var(--blue); border-color:var(--border); font-size:11px; max-width:60px; }
+.rkey-num:active, .rkey-num.pressed { background:var(--blue); color:var(--bg); box-shadow:0 0 10px var(--glow-b); }
+
+/* ── Animations ──────────────────────────────── */
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.5; transform:scale(.8); }
+}
+@keyframes glitch {
+  0%,90%,100% { text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0,255,136,.3); }
+  91%  { text-shadow: 3px 0 var(--blue), -3px 0 var(--red), 0 0 30px var(--accent); }
+  93%  { text-shadow: -3px 0 var(--blue), 3px 0 var(--red), 0 0 30px var(--accent); }
+  95%  { text-shadow: 0 0 30px var(--accent), 0 0 60px rgba(0,255,136,.3); }
+  96%  { text-shadow: 3px 0 var(--blue), -3px 0 var(--red); }
+  98%  { text-shadow: 0 0 30px var(--accent); }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ===== BOOT SCREEN ===== -->
+<div id="bootScreen" class="boot-screen">
+  <div class="boot-inner">
+    <div class="boot-logo">NEXUS</div>
+    <div class="boot-sub">FIELD SCANNER v2.0</div>
+    <div class="boot-lines" id="bootLines"></div>
+    <div class="boot-bar-wrap"><div class="boot-bar" id="bootBar"></div></div>
+  </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<div class="hdr" id="mainHdr" style="display:none">
+  <div class="hdr-logo">
+    <span class="hdr-logo-n">NX</span><span class="hdr-logo-s">SCANNER</span>
+  </div>
+  <div class="hdr-r">
+    <div class="sig-wrap" id="sigWrap">
+      <div class="sig-b b1"></div>
+      <div class="sig-b b2"></div>
+      <div class="sig-b b3"></div>
+      <div class="sig-b b4"></div>
+    </div>
+    <div class="bat-wrap">
+      <div class="bat-b"><div class="bat-f" id="batFill"></div></div>
+    </div>
+    <div class="clk" id="clk">00:00</div>
+  </div>
+</div>
+
+<!-- ===== TABS ===== -->
+<div class="tabs" id="mainTabs" style="display:none">
+  <button class="tab active" data-tab="ble" onclick="sw('ble')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">📡</div>
+    <div class="tab-label">BLE</div>
+  </button>
+  <button class="tab" data-tab="net" onclick="sw('net')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">🌐</div>
+    <div class="tab-label">NET</div>
+  </button>
+  <button class="tab" data-tab="qr" onclick="sw('qr')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">⬛</div>
+    <div class="tab-label">QR</div>
+  </button>
+  <button class="tab" data-tab="sensor" onclick="sw('sensor')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">🧭</div>
+    <div class="tab-label">SENSOR</div>
+  </button>
+  <button class="tab" data-tab="audio" onclick="sw('audio')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">🎙</div>
+    <div class="tab-label">AUDIO</div>
+  </button>
+  <button class="tab" data-tab="tv" onclick="sw('tv')">
+    <div class="tab-dot"></div>
+    <div class="tab-icon">📺</div>
+    <div class="tab-label">TV</div>
+  </button>
+</div>
+
+<!-- ===== PANELS ===== -->
+<div class="panels" id="mainPanels" style="display:none">
+
+  <!-- ===== BLE PANEL ===== -->
+  <div class="panel active" id="panel-ble">
+    <div class="abar">
+      <button class="btn-scan" id="bleScanBtn" onclick="startBLE()">
+        <span class="btn-icon">⚡</span><span class="btn-text">SCAN BLE</span>
+      </button>
+      <button class="btn-scan btn-stop" id="bleStopBtn" onclick="stopBLE()" style="display:none">
+        <span class="btn-icon">■</span><span class="btn-text">STOP</span>
+      </button>
+      <button class="btn-sm" onclick="clearBLE()">CLR</button>
+      <div class="sstrip" id="bleStatus">READY — PRESS SCAN</div>
+    </div>
+    <div class="notice" id="bleNotice">
+      ⚠ BLE REQUIRES HTTPS + CHROME/EDGE. On GitHub Pages this works fine. If you see a permissions error, you may be in an embedded preview — open the page directly.
+    </div>
+    <div class="warnb" id="bleWarn"></div>
+    <div class="shdr">
+      <span>DEVICES FOUND</span>
+      <span class="shdr-cnt" id="bleCnt">0</span>
+    </div>
+    <div class="sa" id="bleCards">
+      <div class="empty"><span class="empty-icon">📡</span><br>NO BLUETOOTH DEVICES<br><span class="empty-hint">Press SCAN BLE to search</span></div>
+    </div>
+    <div class="logb" id="bleLog"></div>
+  </div>
+
+  <!-- ===== NET PANEL ===== -->
+  <div class="panel" id="panel-net">
+    <div class="abar">
+      <button class="btn-scan" id="netIpBtn" onclick="scanWifi()">
+        <span class="btn-icon">📶</span><span class="btn-text">MY IP</span>
+      </button>
+      <button class="btn-scan" id="netScanBtn" onclick="fullSubnetScan()">
+        <span class="btn-icon">🔍</span><span class="btn-text">SCAN LAN</span>
+      </button>
+      <button class="btn-scan btn-stop" id="netStopBtn" onclick="stopSubnet()" style="display:none">
+        <span class="btn-icon">■</span><span class="btn-text">STOP</span>
+      </button>
+      <button class="btn-sm" onclick="clearNet()">CLR</button>
+      <div class="sstrip" id="netStatus">READY</div>
+    </div>
+    <div class="warnb" id="netWarn"></div>
+    <div class="prog-wrap" id="netProgWrap" style="display:none">
+      <div class="prog-label">SCANNING <span id="netProgTxt">0/254</span></div>
+      <div class="prog-bg"><div class="prog-fill" id="netProgBar"></div></div>
+    </div>
+    <div class="shdr">
+      <span>HOSTS FOUND</span>
+      <span class="shdr-cnt" id="netCnt">0</span>
+    </div>
+    <div class="sa" id="netCards">
+      <div class="empty"><span class="empty-icon">🌐</span><br>NO HOSTS YET<br><span class="empty-hint">Press SCAN LAN to search your network</span></div>
+    </div>
+    <div class="logb" id="netLog"></div>
+  </div>
+
+  <!-- ===== QR PANEL ===== -->
+  <div class="panel" id="panel-qr">
+    <div class="abar">
+      <button class="btn-scan" id="qrStartBtn" onclick="startQR()">
+        <span class="btn-icon">📷</span><span class="btn-text">START CAM</span>
+      </button>
+      <button class="btn-scan btn-stop" id="qrStopBtn" onclick="stopQR()" style="display:none">
+        <span class="btn-icon">■</span><span class="btn-text">STOP</span>
+      </button>
+      <button class="btn-sm" onclick="clearQR()">CLR</button>
+      <div class="sstrip" id="qrStatus">READY</div>
+    </div>
+    <div class="warnb" id="qrWarn"></div>
+    <div class="camw" id="camWrap">
+      <video id="qrVideo" autoplay playsinline muted></video>
+      <div class="cam-overlay">
+        <div class="cam-corner tl"></div>
+        <div class="cam-corner tr"></div>
+        <div class="cam-corner bl"></div>
+        <div class="cam-corner br"></div>
+        <div class="cam-scanline" id="camScanline"></div>
+        <div class="cam-target"></div>
+      </div>
+    </div>
+    <canvas id="qrCanvas" style="display:none"></canvas>
+    <div class="shdr">
+      <span>SCAN RESULTS</span>
+      <span class="shdr-cnt" id="qrCnt">0</span>
+    </div>
+    <div class="sa" id="qrResults">
+      <div class="empty"><span class="empty-icon">⬛</span><br>NO SCANS YET<br><span class="empty-hint">Aim camera at QR code or barcode</span></div>
+    </div>
+  </div>
+
+  <!-- ===== SENSOR PANEL ===== -->
+  <div class="panel" id="panel-sensor">
+    <div class="abar">
+      <button class="btn-scan" id="sensStartBtn" onclick="startSensor()">
+        <span class="btn-icon">🧭</span><span class="btn-text">START</span>
+      </button>
+      <button class="btn-scan btn-stop" id="sensStopBtn" onclick="stopSensor()" style="display:none">
+        <span class="btn-icon">■</span><span class="btn-text">STOP</span>
+      </button>
+      <button class="btn-sm" id="sensCalBtn" onclick="calSensor()">CAL</button>
+      <div class="sstrip" id="sensStatus">READY</div>
+    </div>
+    <div class="warnb" id="sensWarn"></div>
+    <!-- Sub-tabs -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="showSub('compass')" id="subtab-compass">🧭 COMPASS</button>
+      <button class="sub-tab" onclick="showSub('mag')" id="subtab-mag">🧲 FIELD</button>
+      <button class="sub-tab" onclick="showSub('motion')" id="subtab-motion">📐 MOTION</button>
+    </div>
+    <!-- Compass -->
+    <div class="sub-panel active" id="sub-compass">
+      <div class="compass-wrap">
+        <canvas id="compassCanvas" width="220" height="220"></canvas>
+      </div>
+      <div class="compass-info">
+        <div class="compass-deg" id="compassDeg">---°</div>
+        <div class="compass-dir" id="compassDir">---</div>
+      </div>
+    </div>
+    <!-- Magnetometer -->
+    <div class="sub-panel" id="sub-mag">
+      <div class="mag-header">
+        <div class="mag-num" id="magNum">000.00</div>
+        <div class="mag-unit">μT</div>
+      </div>
+      <div class="mag-alert" id="magAlert">⚠ MAGNETIC ANOMALY DETECTED ⚠</div>
+      <div class="ax-wrap">
+        <div class="ax-row"><span class="ax-lbl">X</span><div class="ax-track"><div class="ax-fill" id="axX"></div></div><span class="ax-val" id="axXv">0.0</span></div>
+        <div class="ax-row"><span class="ax-lbl">Y</span><div class="ax-track"><div class="ax-fill" id="axY"></div></div><span class="ax-val" id="axYv">0.0</span></div>
+        <div class="ax-row"><span class="ax-lbl">Z</span><div class="ax-track"><div class="ax-fill" id="axZ"></div></div><span class="ax-val" id="axZv">0.0</span></div>
+      </div>
+      <div class="hist-wrap">
+        <div class="hist-label">FIELD HISTORY</div>
+        <div class="hist-bars" id="magHist"></div>
+      </div>
+    </div>
+    <!-- Motion -->
+    <div class="sub-panel" id="sub-motion">
+      <div class="motion-ball-wrap">
+        <div class="motion-ball-bg">
+          <div class="motion-ball" id="motionBall"></div>
+          <div class="motion-cross-h"></div>
+          <div class="motion-cross-v"></div>
+        </div>
+      </div>
+      <div class="ax-wrap">
+        <div class="ax-row"><span class="ax-lbl" style="color:#f66">AX</span><div class="ax-track"><div class="ax-fill ax-red" id="axAx"></div></div><span class="ax-val" id="axAxv">0.0</span></div>
+        <div class="ax-row"><span class="ax-lbl" style="color:#6f6">AY</span><div class="ax-track"><div class="ax-fill ax-green" id="axAy"></div></div><span class="ax-val" id="axAyv">0.0</span></div>
+        <div class="ax-row"><span class="ax-lbl" style="color:#66f">AZ</span><div class="ax-track"><div class="ax-fill ax-blue" id="axAz"></div></div><span class="ax-val" id="axAzv">0.0</span></div>
+      </div>
+    </div>
+    <div class="logb" id="sensLog"></div>
+  </div>
+
+  <!-- ===== AUDIO PANEL ===== -->
+  <div class="panel" id="panel-audio">
+    <div class="abar">
+      <button class="btn-scan" id="audioStartBtn" onclick="startAudio()">
+        <span class="btn-icon">🎙</span><span class="btn-text">SCAN FREQ</span>
+      </button>
+      <button class="btn-scan btn-stop" id="audioStopBtn" onclick="stopAudio()" style="display:none">
+        <span class="btn-icon">■</span><span class="btn-text">STOP</span>
+      </button>
+      <button class="btn-sm" onclick="toggleAudioMode()" id="audioModeBtn">FFT</button>
+      <div class="sstrip" id="audioStatus">READY — MIC NEEDED</div>
+    </div>
+    <div class="audio-stats">
+      <div class="astat"><div class="astat-lbl">PEAK</div><div class="astat-val" id="peakFreq">--- Hz</div></div>
+      <div class="astat"><div class="astat-lbl">LEVEL</div><div class="astat-val" id="audioLevel">-∞ dB</div></div>
+      <div class="astat"><div class="astat-lbl">BAND</div><div class="astat-val" id="audioBand">---</div></div>
+      <div class="astat"><div class="astat-lbl">CLIP</div><div class="astat-val" id="audioClip" style="color:var(--red)">SAFE</div></div>
+    </div>
+    <div class="db-meter-wrap">
+      <div class="db-meter-label">dB</div>
+      <div class="db-meter-bg">
+        <div class="db-meter-fill" id="dbFill"></div>
+        <div class="db-meter-peak" id="dbPeak"></div>
+      </div>
+      <div class="db-meter-scale">
+        <span>-60</span><span>-40</span><span>-20</span><span>-10</span><span>0</span>
+      </div>
+    </div>
+    <canvas id="audioCanvas"></canvas>
+    <canvas id="waterfallCanvas"></canvas>
+    <div class="logb" id="audioLog"></div>
+  </div>
+
+  <!-- ===== TV PANEL ===== -->
+  <div class="panel" id="panel-tv">
+    <div class="tv-setup">
+      <div class="tv-proto-row" id="protoRow">
+        <button class="proto-btn active" onclick="selProto('samsung')" id="proto-samsung">SAMSUNG</button>
+        <button class="proto-btn" onclick="selProto('lg')" id="proto-lg">LG</button>
+        <button class="proto-btn" onclick="selProto('roku')" id="proto-roku">ROKU</button>
+        <button class="proto-btn" onclick="selProto('sony')" id="proto-sony">SONY</button>
+        <button class="proto-btn" onclick="selProto('philips')" id="proto-philips">PHILIPS</button>
+        <button class="proto-btn" onclick="selProto('androidtv')" id="proto-androidtv">ANDROID</button>
+      </div>
+      <div class="tv-ip-row">
+        <div class="tv-ip-field">
+          <label class="tv-ip-label">TV IP ADDRESS</label>
+          <input class="tv-ip-in" id="tvIP" type="text" placeholder="192.168.1.100" autocomplete="off" spellcheck="false" inputmode="decimal">
+        </div>
+        <button class="btn-connect" id="tvConnectBtn" onclick="tvConnect()">
+          <span id="tvConnectTxt">CONNECT</span>
+        </button>
+      </div>
+      <div class="tv-status-row">
+        <div class="tv-dot" id="tvDot"></div>
+        <div class="tv-status-txt" id="tvStatusBar">SELECT PROTOCOL — ENTER IP — CONNECT</div>
+      </div>
+    </div>
+    <div class="remote-wrap">
+      <div class="remote-brand" id="remoteBrand">● SELECT PROTOCOL ABOVE</div>
+      <div class="remote-section">
+        <div class="remote-row">
+          <button class="rkey rkey-power" onclick="tvKey('POWER')">⏻ POWER</button>
+        </div>
+      </div>
+      <div class="remote-section">
+        <div class="remote-sec-label">VOLUME & INPUT</div>
+        <div class="remote-row">
+          <button class="rkey rkey-func" onclick="tvKey('VOL_UP')">VOL +</button>
+          <button class="rkey rkey-func" onclick="tvKey('MUTE')">🔇 MUTE</button>
+          <button class="rkey rkey-func" onclick="tvKey('SOURCE')">⤳ SRC</button>
+          <button class="rkey rkey-func" onclick="tvKey('VOL_DOWN')">VOL -</button>
+        </div>
+      </div>
+      <div class="remote-section">
+        <div class="remote-sec-label">CHANNELS & NAVIGATION</div>
+        <div class="remote-row">
+          <button class="rkey rkey-nav" onclick="tvKey('CH_UP')">CH +</button>
+          <button class="rkey rkey-nav rkey-nav-big" onclick="tvKey('UP')">▲</button>
+          <button class="rkey rkey-nav" onclick="tvKey('CH_DOWN')">CH −</button>
+        </div>
+        <div class="remote-row">
+          <button class="rkey rkey-nav rkey-nav-big" onclick="tvKey('LEFT')">◀</button>
+          <button class="rkey rkey-ok" onclick="tvKey('OK')">OK</button>
+          <button class="rkey rkey-nav rkey-nav-big" onclick="tvKey('RIGHT')">▶</button>
+        </div>
+        <div class="remote-row">
+          <button class="rkey rkey-func" onclick="tvKey('BACK')">↩ BACK</button>
+          <button class="rkey rkey-nav rkey-nav-big" onclick="tvKey('DOWN')">▼</button>
+          <button class="rkey rkey-func" onclick="tvKey('HOME')">⌂ HOME</button>
+        </div>
+      </div>
+      <div class="remote-section">
+        <div class="remote-sec-label">KEYPAD</div>
+        <div class="remote-row">
+          <button class="rkey rkey-num" onclick="tvKey('1')">1</button>
+          <button class="rkey rkey-num" onclick="tvKey('2')">2</button>
+          <button class="rkey rkey-num" onclick="tvKey('3')">3</button>
+        </div>
+        <div class="remote-row">
+          <button class="rkey rkey-num" onclick="tvKey('4')">4</button>
+          <button class="rkey rkey-num" onclick="tvKey('5')">5</button>
+          <button class="rkey rkey-num" onclick="tvKey('6')">6</button>
+        </div>
+        <div class="remote-row">
+          <button class="rkey rkey-num" onclick="tvKey('7')">7</button>
+          <button class="rkey rkey-num" onclick="tvKey('8')">8</button>
+          <button class="rkey rkey-num" onclick="tvKey('9')">9</button>
+        </div>
+        <div class="remote-row">
+          <button class="rkey rkey-func" onclick="tvKey('PREV')">⏮ PREV</button>
+          <button class="rkey rkey-num" onclick="tvKey('0')">0</button>
+          <button class="rkey rkey-func" onclick="tvKey('NEXT')">NEXT ⏭</button>
+        </div>
+      </div>
+    </div>
+    <div class="logb" id="tvLog"></div>
+  </div>
+
+</div><!-- /panels -->
+
+<script>
+/* js/utils.js — NEXUS Shared Utilities */
+
+function el(id) { return document.getElementById(id); }
+function now() {
+  return new Date().toLocaleTimeString('en-GB', { hour12: false });
+}
+
+function log(id, msg, type = '') {
+  const container = el(id);
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'lr';
+  row.innerHTML = `<span class="lt">${now()}</span><span class="lm ${type}">${esc(msg)}</span>`;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+  while (container.children.length > 80) container.removeChild(container.firstChild);
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function showWarn(id, msg) {
+  const el2 = el(id);
+  if (!el2) return;
+  el2.textContent = msg;
+  el2.classList.add('show');
+}
+function hideWarn(id) {
+  const el2 = el(id);
+  if (el2) el2.classList.remove('show');
+}
+
+function setStatus(id, msg, type = '') {
+  const el2 = el(id);
+  if (!el2) return;
+  el2.textContent = msg;
+  el2.className = 'sstrip ' + type;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function timeout(ms) {
+  return new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), ms));
+}
+
+function makeCard(titleText, badgeText, badgeClass, kvPairs, extra = '') {
+  const rows = kvPairs.map(([k, v, cls]) =>
+    `<div class="kv"><span class="k">${esc(k)}</span><span class="v ${cls || ''}">${esc(String(v))}</span></div>`
+  ).join('');
+  return `
+    <div class="card">
+      <div class="ctitle">
+        <span class="cname">${esc(titleText)}</span>
+        <span class="badge ${badgeClass}">${esc(badgeText)}</span>
+      </div>
+      ${rows}
+      ${extra}
+    </div>`;
+}
+
+function prependCard(containerId, html) {
+  const wrap = el(containerId);
+  if (!wrap) return;
+  wrap.querySelector('.empty')?.remove();
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  wrap.insertBefore(div.firstElementChild, wrap.firstChild);
+}
+
+function appendCard(containerId, html) {
+  const wrap = el(containerId);
+  if (!wrap) return;
+  wrap.querySelector('.empty')?.remove();
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  wrap.appendChild(div.firstElementChild);
+}
+
+// Local IP via WebRTC
+function getLocalIPs() {
+  return new Promise(resolve => {
+    const ips = new Set();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve([...ips]);
+    };
+
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('');
+      pc.createOffer()
+        .then(o => pc.setLocalDescription(o))
+        .catch(finish);
+
+      pc.onicecandidate = e => {
+        if (!e.candidate) { pc.close(); finish(); return; }
+        const m = e.candidate.candidate.match(/(\d{1,3}(?:\.\d{1,3}){3})/g);
+        if (m) m.forEach(ip => {
+          if (!ip.startsWith('0.') && !ip.startsWith('127.') && ip !== '0.0.0.0') ips.add(ip);
+        });
+      };
+      setTimeout(() => { try { pc.close(); } catch (e) {} finish(); }, 2500);
+    } catch (err) {
+      finish();
+    }
+  });
+}
+/* js/app.js — Boot, Clock, Tabs */
+
+const BOOT_STEPS = [
+  { text: 'NEXUS SCANNER v2.0  BUILD 2024', cls: '' },
+  { text: 'CHECKING HTTPS...', cls: '', check: () => location.protocol === 'https:' || location.hostname === 'localhost' },
+  { text: 'LOADING BLE MODULE', cls: 'ok' },
+  { text: 'LOADING NET MODULE', cls: 'ok' },
+  { text: 'LOADING QR MODULE', cls: 'ok' },
+  { text: 'LOADING SENSOR MODULE', cls: 'ok' },
+  { text: 'LOADING AUDIO MODULE', cls: 'ok' },
+  { text: 'LOADING TV MODULE', cls: 'ok' },
+  { text: 'ALL SYSTEMS NOMINAL — READY', cls: 'ok' },
+];
+
+async function runBoot() {
+  const lines = el('bootLines');
+  const bar   = el('bootBar');
+
+  for (let i = 0; i < BOOT_STEPS.length; i++) {
+    const step = BOOT_STEPS[i];
+    await sleep(80 + Math.random() * 60);
+
+    const div = document.createElement('div');
+    div.className = 'boot-line ' + step.cls;
+
+    let label = step.text;
+    if (step.check !== undefined) {
+      const ok = step.check();
+      label += ok ? ' ... OK' : ' ... WARNING';
+      div.className = 'boot-line ' + (ok ? 'ok' : 'err');
+      if (!ok) {
+        const warn = document.createElement('div');
+        warn.className = 'boot-line err';
+        warn.textContent = '  ⚠ SOME FEATURES MAY NOT WORK WITHOUT HTTPS';
+        lines.appendChild(div);
+        lines.appendChild(warn);
+        bar.style.width = ((i + 1) / BOOT_STEPS.length * 100) + '%';
+        continue;
+      }
+    }
+
+    div.textContent = label;
+    lines.appendChild(div);
+    lines.scrollTop = lines.scrollHeight;
+    bar.style.width = ((i + 1) / BOOT_STEPS.length * 100) + '%';
+  }
+
+  await sleep(400);
+
+  // Fade out boot, show main UI
+  el('bootScreen').style.transition = 'opacity .4s';
+  el('bootScreen').style.opacity = '0';
+  await sleep(420);
+  el('bootScreen').style.display = 'none';
+  el('mainHdr').style.display    = '';
+  el('mainTabs').style.display   = '';
+  el('mainPanels').style.display = '';
+
+  // Post-boot inits
+  tickClk();
+  setInterval(tickClk, 30000);
+  updateBattery();
+  initAudioCanvas();
+}
+
+function tickClk() {
+  const d = new Date();
+  el('clk').textContent =
+    String(d.getHours()).padStart(2, '0') + ':' +
+    String(d.getMinutes()).padStart(2, '0');
+}
+
+async function updateBattery() {
+  if (!navigator.getBattery) return;
+  try {
+    const bat = await navigator.getBattery();
+    const update = () => {
+      const pct = Math.round(bat.level * 100);
+      el('batFill').style.width = pct + '%';
+      el('batFill').style.background = pct < 20 ? 'var(--red)' : pct < 40 ? 'var(--yellow)' : 'var(--accent)';
+    };
+    update();
+    bat.addEventListener('levelchange', update);
+    bat.addEventListener('chargingchange', update);
+  } catch (e) {}
+}
+
+// Online/offline
+window.addEventListener('online',  () => {
+  const sbs = document.querySelectorAll('.sig-b');
+  sbs.forEach(b => b.classList.add('on'));
+});
+window.addEventListener('offline', () => {
+  const sbs = document.querySelectorAll('.sig-b');
+  sbs.forEach((b, i) => { if (i > 0) b.classList.remove('on'); });
+});
+
+// Signal strength indicator (simulated for aesthetics)
+function updateSignal() {
+  const sbs = document.querySelectorAll('.sig-b');
+  // Show online state
+  const online = navigator.onLine;
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  let bars = online ? 3 : 0;
+  if (conn) {
+    const dl = conn.downlink || 10;
+    bars = dl > 10 ? 4 : dl > 5 ? 3 : dl > 1 ? 2 : 1;
+  }
+  sbs.forEach((b, i) => b.classList.toggle('on', i < bars));
+}
+setInterval(updateSignal, 5000);
+
+// ── Tab switching ────────────────────────────
+function sw(id) {
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === id)
+  );
+  document.querySelectorAll('.panel').forEach(p =>
+    p.classList.toggle('active', p.id === 'panel-' + id)
+  );
+  // Resize canvases when switching to audio
+  if (id === 'audio') resizeAudioCanvas();
+}
+
+// ── PWA install prompt ───────────────────────
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  // Could show install button here
+});
+
+// ── Kick off boot ────────────────────────────
+document.addEventListener('DOMContentLoaded', runBoot);
+/* js/ble.js — Bluetooth Low Energy Scanner */
+
+let bleDevs   = {};
+let bleStopped = true;
+
+async function startBLE() {
+  // Check environment
+  if (!navigator.bluetooth) {
+    showWarn('bleWarn', '⚠ Web Bluetooth not available. Use Chrome/Edge on Android or Chrome Desktop. ' +
+      'Must be served over HTTPS (GitHub Pages is fine). ' +
+      'If inside an iframe preview, open the page directly.');
+    setStatus('bleStatus', 'BLE NOT AVAILABLE', 'err');
+    log('bleLog', 'WEB BLUETOOTH NOT SUPPORTED IN THIS ENVIRONMENT', 'e');
+    return;
+  }
+
+  bleStopped = false;
+  el('bleScanBtn').style.display = 'none';
+  el('bleStopBtn').style.display = 'inline-flex';
+  document.querySelector('[data-tab="ble"]').classList.add('scanning');
+  hideWarn('bleWarn');
+
+  await bleLoop();
+}
+
+async function bleLoop() {
+  while (!bleStopped) {
+    setStatus('bleStatus', 'PICK A DEVICE — CLOSE PICKER TO STOP', 'busy');
+    try {
+      const dev = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          'battery_service',
+          'device_information',
+          'generic_access',
+          'heart_rate',
+          'blood_pressure',
+          'health_thermometer',
+        ]
+      });
+
+      setStatus('bleStatus', 'CONNECTING TO ' + (dev.name || 'DEVICE') + '...', 'busy');
+      log('bleLog', 'FOUND: ' + (dev.name || 'UNNAMED DEVICE'), 'ok');
+
+      let srv   = null;
+      let svcs  = [];
+      let bat   = 'N/A';
+      let manuf = 'N/A';
+      let model = 'N/A';
+      let fwRev = 'N/A';
+
+      // Try GATT connection
+      try {
+        srv = await Promise.race([dev.gatt.connect(), timeout(5000)]);
+      } catch (e) {
+        log('bleLog', 'GATT: ' + (e.message || 'FAILED'), 'w');
+      }
+
+      if (srv) {
+        // Get services
+        try {
+          const s = await srv.getPrimaryServices();
+          svcs = s.map(x => x.uuid);
+        } catch (e) {}
+
+        // Battery
+        try {
+          const bs  = await srv.getPrimaryService('battery_service');
+          const bc  = await bs.getCharacteristic('battery_level');
+          const bv  = await bc.readValue(); // ✅ FIXED — was missing
+          bat = bv.getUint8(0) + '%';
+        } catch (e) {}
+
+        // Device Info
+        try {
+          const di = await srv.getPrimaryService('device_information');
+          try {
+            const mc = await di.getCharacteristic('manufacturer_name_string');
+            manuf = new TextDecoder().decode(await mc.readValue()).trim();
+          } catch (e) {}
+          try {
+            const mm = await di.getCharacteristic('model_number_string');
+            model = new TextDecoder().decode(await mm.readValue()).trim();
+          } catch (e) {}
+          try {
+            const fw = await di.getCharacteristic('firmware_revision_string');
+            fwRev = new TextDecoder().decode(await fw.readValue()).trim();
+          } catch (e) {}
+        } catch (e) {}
+      }
+
+      const uid = dev.id || ('ble-' + Math.random().toString(36).slice(2, 8));
+
+      if (!bleDevs[uid]) {
+        bleDevs[uid] = true;
+        renderBLECard(dev, srv, svcs, bat, manuf, model, fwRev);
+        el('bleCnt').textContent = Object.keys(bleDevs).length;
+      } else {
+        log('bleLog', 'ALREADY SEEN: ' + (dev.name || uid), 'w');
+      }
+
+      setStatus('bleStatus', Object.keys(bleDevs).length + ' DEVICE(S) FOUND', 'ok');
+
+    } catch (err) {
+      const cancelled = err.name === 'NotFoundError'
+        || (err.message || '').toLowerCase().includes('cancel')
+        || (err.message || '').toLowerCase().includes('user cancel');
+
+      if (cancelled) {
+        bleStopped = true;
+        setStatus('bleStatus', 'PICKER CLOSED — DONE', '');
+        log('bleLog', 'USER CLOSED PICKER', 'w');
+        break;
+      }
+
+      if ((err.message || '').includes('permissions policy')) {
+        showWarn('bleWarn', '⚠ PERMISSIONS POLICY ERROR: Open this page directly (not in an iframe). ' +
+          'On GitHub Pages: visit https://YOUR-NAME.github.io/REPO directly in Chrome.');
+        setStatus('bleStatus', 'PERMISSIONS ERROR', 'err');
+        log('bleLog', 'PERMISSIONS POLICY BLOCKED BLE', 'e');
+        bleStopped = true;
+        break;
+      }
+
+      log('bleLog', 'ERR: ' + (err.message || err.name || 'UNKNOWN'), 'e');
+      setStatus('bleStatus', 'ERROR — RETRYING...', 'err');
+      await sleep(1200);
+    }
+
+    if (bleStopped) break;
+
+    // Prompt to scan another
+    const again = await askAgainBLE();
+    if (!again) break;
+  }
+
+  el('bleScanBtn').style.display = 'inline-flex';
+  el('bleStopBtn').style.display = 'none';
+  document.querySelector('[data-tab="ble"]').classList.remove('scanning');
+}
+
+function askAgainBLE() {
+  return new Promise(resolve => {
+    setStatus('bleStatus', 'SCAN ANOTHER? TAP SCAN / STOP', '');
+    el('bleScanBtn').style.display = 'inline-flex';
+
+    const onScan = () => {
+      cleanup(); el('bleScanBtn').style.display = 'none'; resolve(true);
+    };
+    const onStop = () => {
+      cleanup(); resolve(false);
+    };
+    function cleanup() {
+      el('bleScanBtn').removeEventListener('click', onScan);
+      el('bleStopBtn').removeEventListener('click', onStop);
+    }
+    el('bleScanBtn').addEventListener('click', onScan);
+    el('bleStopBtn').addEventListener('click', onStop);
+  });
+}
+
+function renderBLECard(dev, srv, svcs, bat, manuf, model, fw) {
+  const name = (dev.name || 'UNKNOWN DEVICE').toUpperCase();
+  const conn = !!srv;
+
+  // Guess device type from name/manufacturer
+  const type = guessBLEType(name, manuf, svcs);
+
+  const html = `
+    <div class="card">
+      <div class="ctitle">
+        <span class="cname">${esc(name)} ${type ? '<span style="font-size:11px">' + type + '</span>' : ''}</span>
+        <span class="badge ${conn ? 'badge-g' : 'badge-d'}">${conn ? 'CONNECTED' : 'FOUND'}</span>
+      </div>
+      <div class="kv"><span class="k">MANUFACTURER</span><span class="v">${esc(manuf)}</span></div>
+      <div class="kv"><span class="k">MODEL</span><span class="v">${esc(model)}</span></div>
+      <div class="kv"><span class="k">FIRMWARE</span><span class="v lo">${esc(fw)}</span></div>
+      <div class="kv"><span class="k">DEVICE ID</span><span class="v sm lo">${esc((dev.id || 'N/A').slice(0, 28))}</span></div>
+      <div class="kv"><span class="k">GATT CONN</span><span class="v ${conn ? 'hi' : ''}">${conn ? 'YES' : 'NO'}</span></div>
+      <div class="kv"><span class="k">BATTERY</span><span class="v hi">${esc(bat)}</span></div>
+      <div class="kv"><span class="k">SERVICES</span><span class="v hi">${svcs.length}</span></div>
+      <div class="kv"><span class="k">SEEN</span><span class="v lo">${now()}</span></div>
+      ${svcs.length ? `<div class="pdiv"></div>${svcs.map(s => `<div style="font-family:var(--vt);font-size:11px;color:var(--mid);padding:1px 0">${esc(s)}</div>`).join('')}` : ''}
+    </div>`;
+
+  prependCard('bleCards', html);
+  log('bleLog', 'CARD: ' + name + ' | SVCS:' + svcs.length + ' | BAT:' + bat, 'ok');
+}
+
+function guessBLEType(name, manuf, svcs) {
+  const n = name.toLowerCase();
+  const m = (manuf || '').toLowerCase();
+  if (n.includes('watch') || n.includes('band'))       return '⌚';
+  if (n.includes('bud') || n.includes('ear') || n.includes('headphone') || n.includes('airpod')) return '🎧';
+  if (n.includes('heart') || svcs.some(s => s.includes('heart_rate'))) return '❤';
+  if (n.includes('keyboard'))   return '⌨';
+  if (n.includes('mouse'))      return '🖱';
+  if (n.includes('speaker') || n.includes('jbl') || n.includes('bose')) return '🔊';
+  if (n.includes('phone') || n.includes('iphone') || n.includes('samsung') || n.includes('pixel')) return '📱';
+  if (n.includes('tv') || n.includes('remote'))  return '📺';
+  if (m.includes('apple'))      return '🍎';
+  return '';
+}
+
+function stopBLE() {
+  bleStopped = true;
+  el('bleScanBtn').style.display = 'inline-flex';
+  el('bleStopBtn').style.display = 'none';
+  document.querySelector('[data-tab="ble"]').classList.remove('scanning');
+  setStatus('bleStatus', 'STOPPED', '');
+  log('bleLog', 'SCAN STOPPED', 'w');
+}
+
+function clearBLE() {
+  bleDevs = {};
+  el('bleCards').innerHTML = `<div class="empty"><span class="empty-icon">📡</span><br>NO BLUETOOTH DEVICES<br><span class="empty-hint">Press SCAN BLE to search</span></div>`;
+  el('bleCnt').textContent = '0';
+  el('bleLog').innerHTML = '';
+  hideWarn('bleWarn');
+  setStatus('bleStatus', 'READY — PRESS SCAN', '');
+}
+/* js/wifi.js — Network / WiFi Scanner */
+
+let localIP      = '';
+let subnetStop   = false;
+let netHostCount = 0;
+
+// ── Device fingerprint database ──────────────
+// Ordered by specificity — most specific ports first
+const DEVICE_DB = [
+  // ── Samsung Smart TV (Tizen OS) ──────────
+  { ports:[8001], brand:'Samsung', model:'Smart TV', os:'Tizen',   icon:'📺', color:'badge-o', proto:'samsung' },
+  { ports:[8002], brand:'Samsung', model:'Smart TV', os:'Tizen SSL',icon:'📺', color:'badge-o', proto:'samsung' },
+  { ports:[52235],brand:'Samsung', model:'Smart TV', os:'Tizen UPnP',icon:'📺',color:'badge-o', proto:'samsung' },
+
+  // ── LG Smart TV (WebOS) ──────────────────
+  { ports:[55000], brand:'LG',    model:'Smart TV',  os:'WebOS 4+',  icon:'📺', color:'badge-r', proto:'lg' },
+  { ports:[3000],  brand:'LG',    model:'Smart TV',  os:'WebOS',     icon:'📺', color:'badge-r', proto:'lg' },
+  { ports:[9080],  brand:'LG',    model:'Smart TV',  os:'NetCast',   icon:'📺', color:'badge-r', proto:'lg' },
+
+  // ── Sony Bravia ───────────────────────────
+  { ports:[4343],  brand:'Sony',  model:'BRAVIA',    os:'Android TV',icon:'📺', color:'badge-b', proto:'sony' },
+  { ports:[10000], brand:'Sony',  model:'BRAVIA',    os:'Android TV',icon:'📺', color:'badge-b', proto:'sony' },
+  { ports:[52323], brand:'Sony',  model:'BRAVIA',    os:'Android TV',icon:'📺', color:'badge-b', proto:'sony' },
+
+  // ── Philips (Android TV / Saphi) ─────────
+  { ports:[1925],  brand:'Philips',model:'Smart TV', os:'Android TV/Saphi',icon:'📺',color:'badge-b',proto:'sony' },
+  { ports:[1926],  brand:'Philips',model:'Smart TV', os:'Android TV/Saphi',icon:'📺',color:'badge-b',proto:'sony' },
+
+  // ── Panasonic VIERA ───────────────────────
+  { ports:[58866], brand:'Panasonic',model:'VIERA',  os:'My Home Screen',icon:'📺',color:'badge-g',proto:'generic' },
+  { ports:[56789], brand:'Panasonic',model:'VIERA',  os:'My Home Screen',icon:'📺',color:'badge-g',proto:'generic' },
+
+  // ── Hisense (VIDAA / Android TV) ─────────
+  { ports:[36669], brand:'Hisense', model:'Smart TV',os:'VIDAA',    icon:'📺', color:'badge-b', proto:'generic' },
+  { ports:[8090],  brand:'Hisense', model:'Smart TV',os:'Android',  icon:'📺', color:'badge-b', proto:'generic' },
+
+  // ── TCL / Roku TV ────────────────────────
+  { ports:[8060],  brand:'TCL',    model:'Roku TV',  os:'RokuOS',   icon:'📺', color:'badge-b', proto:'roku' },
+  { ports:[4123],  brand:'TCL',    model:'Smart TV', os:'Android',  icon:'📺', color:'badge-b', proto:'generic' },
+
+  // ── Vestel (JVC, Finlux, Telefunken, Toshiba EU, Sharp EU) ──
+  { ports:[1453],  brand:'Vestel', model:'Smart TV', os:'Vewd OS',  icon:'📺', color:'badge-g', proto:'generic' },
+
+  // ── Sharp (Aquos) ────────────────────────
+  { ports:[8080],  brand:'Sharp',  model:'AQUOS TV', os:'Linux',    icon:'📺', color:'badge-g', proto:'generic' },
+
+  // ── Chromecast / Google TV ────────────────
+  { ports:[8008],  brand:'Google', model:'Chromecast',os:'CastOS',  icon:'📡', color:'badge-b', proto:'androidtv' },
+  { ports:[8009],  brand:'Google', model:'Chromecast',os:'CastOS',  icon:'📡', color:'badge-b', proto:'androidtv' },
+
+  // ── Apple TV ─────────────────────────────
+  { ports:[7000],  brand:'Apple',  model:'Apple TV', os:'tvOS',     icon:'📺', color:'badge-d', proto:'generic' },
+  { ports:[32498], brand:'Apple',  model:'Apple TV', os:'AirPlay 2',icon:'📺', color:'badge-d', proto:'generic' },
+
+  // ── Amazon Fire TV ────────────────────────
+  { ports:[8008,8009], brand:'Amazon', model:'Fire TV',os:'FireOS', icon:'📺', color:'badge-o', proto:'generic' },
+
+  // ── Sonos ────────────────────────────────
+  { ports:[1400],  brand:'Sonos',  model:'Speaker',  os:'SonosOS',  icon:'🔊', color:'badge-d', proto:'generic' },
+
+  // ── Network gear ─────────────────────────
+  { ports:[80,443],   brand:'Router', model:'Gateway',os:'—',       icon:'🔀', color:'badge-d', proto:null },
+  { ports:[80],       brand:'Device', model:'HTTP',   os:'—',       icon:'💻', color:'badge-d', proto:null },
+  { ports:[554],      brand:'Camera', model:'IP Cam', os:'RTSP',    icon:'📷', color:'badge-d', proto:null },
+];
+
+const PROBE_PORTS = [80, 1400, 1453, 1925, 3000, 4343, 7000, 8001, 8002, 8008, 8060, 8090, 9080, 55000, 58866];
+
+function identifyDevice(openPorts, ip) {
+  // Check router-like IPs
+  const isGateway = ip.endsWith('.1') || ip.endsWith('.254');
+
+  for (const dev of DEVICE_DB) {
+    const match = dev.ports.every(p => openPorts.includes(p));
+    if (match && dev.ports.length > 0 && openPorts.length > 0) {
+      if (dev.ports[0] === 80 && openPorts.length === 1 && isGateway) {
+        return { brand:'Router', model:'Gateway', os:'—', icon:'🔀', color:'badge-d', proto:null, isTV:false };
+      }
+      const isTV = ['📺'].includes(dev.icon);
+      return { ...dev, isTV };
+    }
+  }
+
+  if (isGateway) {
+    return { brand:'Router', model:'Gateway', os:'—', icon:'🔀', color:'badge-d', proto:null, isTV:false };
+  }
+  return { brand:'Unknown', model:'Device', os:'—', icon:'💻', color:'badge-d', proto:null, isTV:false };
+}
+
+// ── My IP ───────────────────────────────────
+async function scanWifi() {
+  el('netIpBtn').disabled = true;
+  setStatus('netStatus', 'PROBING LOCAL IP...', 'busy');
+  log('netLog', 'PROBING LOCAL NETWORK...', '');
+
+  const ips  = await getLocalIPs();
+  localIP    = ips.find(ip => ip.startsWith('192.') || ip.startsWith('10.') || ip.startsWith('172.')) || ips[0] || '';
+
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+  if (localIP) {
+    const subnet = localIP.split('.').slice(0, 3).join('.');
+    // Pre-fill TV IP
+    el('tvIP').value = subnet + '.1';
+    log('netLog', 'LOCAL IP: ' + localIP, 'ok');
+    log('netLog', 'TV IP PRE-FILLED: ' + subnet + '.1 (CHANGE IF NEEDED)', 'd');
+  } else {
+    showWarn('netWarn',
+      '⚠ Could not detect local IP. This may happen if WebRTC is blocked by your browser (e.g. Firefox privacy.resistFingerprinting). ' +
+      'Try Chrome or enter your TV IP manually in the TV tab.');
+    log('netLog', 'LOCAL IP NOT FOUND — WEBRTC BLOCKED?', 'e');
+  }
+
+  const html = makeCard(
+    localIP ? 'LOCAL: ' + localIP : 'ACTIVE CONNECTION',
+    navigator.onLine ? 'ONLINE' : 'OFFLINE',
+    navigator.onLine ? 'badge-g' : 'badge-r',
+    [
+      ['LOCAL IP',  localIP || 'N/A — See warning above', localIP ? 'hi' : 'err'],
+      ['ALL IPs',   ips.length ? ips.join(', ') : 'N/A', ''],
+      ['SUBNET',    localIP ? localIP.split('.').slice(0,3).join('.') + '.0/24' : 'N/A', ''],
+      ['ONLINE',    navigator.onLine ? 'YES' : 'NO', navigator.onLine ? 'hi' : 'err'],
+      ['TYPE',      conn ? (conn.effectiveType || conn.type || '?').toUpperCase() : 'UNKNOWN', ''],
+      ['DOWNLINK',  conn?.downlink ? conn.downlink + ' Mbps' : 'N/A', ''],
+      ['RTT',       conn?.rtt      ? conn.rtt + ' ms' : 'N/A', ''],
+      ['SAVE DATA', conn?.saveData ? 'YES' : 'NO', ''],
+    ]
+  );
+
+  el('netCards').innerHTML = '';
+  appendCard('netCards', html);
+
+  el('netCnt').textContent = ips.length;
+  setStatus('netStatus', localIP ? 'GOT ' + localIP : 'IP NOT FOUND — SEE WARNING', localIP ? 'ok' : 'err');
+  el('netIpBtn').disabled = false;
+}
+
+// ── Full subnet scan ─────────────────────────
+async function fullSubnetScan() {
+  if (!localIP) {
+    await scanWifi();
+    if (!localIP) {
+      log('netLog', 'CANNOT SCAN: NO LOCAL IP', 'e');
+      return;
+    }
+  }
+
+  subnetStop   = false;
+  netHostCount = 0;
+  el('netCards').innerHTML = '';
+
+  el('netScanBtn').style.display  = 'none';
+  el('netStopBtn').style.display  = 'inline-flex';
+  el('netProgWrap').style.display = 'block';
+  document.querySelector('[data-tab="net"]').classList.add('scanning');
+
+  const subnet = localIP.split('.').slice(0, 3).join('.');
+  setStatus('netStatus', 'SCANNING ' + subnet + '.1-.254...', 'busy');
+  log('netLog', 'FULL SCAN: ' + subnet + '.0/24 — PROBING ' + PROBE_PORTS.length + ' PORTS/HOST', 'w');
+
+  const BATCH = 14;
+  let done    = 0;
+  const seen  = new Set();
+
+  for (let i = 1; i <= 254 && !subnetStop; i += BATCH) {
+    const batch = Array.from({ length: Math.min(BATCH, 255 - i) }, (_, k) => i + k);
+
+    await Promise.all(batch.map(async h => {
+      if (subnetStop) return;
+      const ip        = subnet + '.' + h;
+      const openPorts = [];
+
+      await Promise.all(PROBE_PORTS.map(async port => {
+        if (subnetStop) return;
+        try {
+          const ctrl = new AbortController();
+          const tid  = setTimeout(() => ctrl.abort(), 600);
+          await fetch(`http://${ip}:${port}`, { signal: ctrl.signal, mode: 'no-cors' });
+          clearTimeout(tid);
+          openPorts.push(port);
+        } catch (e) {
+          // TypeError = host responded but CORS blocked = port is open
+          if (e.name === 'TypeError') openPorts.push(port);
+          // AbortError = timeout = port closed / no response
+        }
+      }));
+
+      if (openPorts.length > 0 && !seen.has(ip)) {
+        seen.add(ip);
+        netHostCount++;
+        renderHostCard(ip, openPorts);
+        el('netCnt').textContent = netHostCount;
+      }
+      done++;
+    }));
+
+    // Progress update
+    const pct = Math.round(done / 254 * 100);
+    el('netProgBar').style.width = pct + '%';
+    el('netProgTxt').textContent = done + '/254 — ' + netHostCount + ' HOST(S)';
+    setStatus('netStatus', 'SCANNING... ' + pct + '%', 'busy');
+  }
+
+  el('netScanBtn').style.display  = 'inline-flex';
+  el('netStopBtn').style.display  = 'none';
+  el('netProgWrap').style.display = 'none';
+  document.querySelector('[data-tab="net"]').classList.remove('scanning');
+
+  if (subnetStop) {
+    setStatus('netStatus', 'STOPPED — ' + netHostCount + ' FOUND', '');
+    log('netLog', 'SCAN STOPPED', 'w');
+  } else {
+    setStatus('netStatus', 'DONE — ' + netHostCount + ' HOST(S)', 'ok');
+    log('netLog', 'SCAN COMPLETE: ' + netHostCount + ' HOSTS FOUND ON ' + subnet + '.0/24', 'ok');
+    if (netHostCount === 0) {
+      el('netCards').innerHTML = `<div class="empty"><span class="empty-icon">🌐</span><br>NO HOSTS FOUND<br><span class="empty-hint">Make sure you're on WiFi</span></div>`;
+    }
+  }
+}
+
+function renderHostCard(ip, openPorts) {
+  const info  = identifyDevice(openPorts, ip);
+  const isTV  = info.isTV;
+  const wrap  = el('netCards');
+  if (!wrap) return;
+  wrap.querySelector('.empty')?.remove();
+
+  // Build port details
+  const portRows = openPorts.map(p => {
+    const match = DEVICE_DB.find(d => d.ports.includes(p));
+    const label = match ? match.brand + ' ' + match.os : (p === 80 ? 'HTTP' : p === 443 ? 'HTTPS' : 'SERVICE');
+    return `<div class="kv"><span class="k">${p}</span><span class="v sm">${esc(label)}</span></div>`;
+  }).join('');
+
+  const tvBtn = isTV
+    ? `<div class="pdiv"></div>
+       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+         <span class="tv-brand-pill">${info.icon} ${esc(info.brand)} ${esc(info.model)} — ${esc(info.os)}</span>
+       </div>
+       <button class="use-tv-btn" onclick="setTVFromScan('${ip}','${info.proto || 'samsung'}')">
+         ▶ USE IN TV REMOTE TAB
+       </button>`
+    : '';
+
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.style.animation = 'cardIn .15s ease-out';
+  c.innerHTML = `
+    <div class="ctitle">
+      <span class="cname">${info.icon} ${esc(ip)}</span>
+      <span class="badge ${info.color}">${esc(info.brand)}</span>
+    </div>
+    <div class="kv"><span class="k">TYPE</span><span class="v">${esc(info.model)}</span></div>
+    <div class="kv"><span class="k">OS / API</span><span class="v lo">${esc(info.os)}</span></div>
+    <div class="kv"><span class="k">OPEN PORTS</span><span class="v hi">${openPorts.join(', ')}</span></div>
+    ${portRows}
+    ${tvBtn}
+  `;
+
+  if (isTV) {
+    wrap.insertBefore(c, wrap.firstChild);
+    el('tvIP').value = ip; // Auto-fill TV IP
+    log('netLog', '📺 TV FOUND: ' + ip + ' — ' + info.brand + ' ' + info.model + ' (' + info.os + ')', 'ok');
+  } else {
+    wrap.appendChild(c);
+    log('netLog', 'HOST: ' + ip + ' | ' + info.brand + ' | PORTS:' + openPorts.join(','), 'd');
+  }
+}
+
+function setTVFromScan(ip, proto) {
+  el('tvIP').value = ip;
+  selProto(proto || 'samsung');
+  sw('tv');
+  log('tvLog', 'IP SET FROM NET SCAN: ' + ip + ' (' + (proto || 'samsung').toUpperCase() + ')', 'ok');
+}
+
+function stopSubnet() { subnetStop = true; }
+
+function clearNet() {
+  netHostCount = 0;
+  el('netCards').innerHTML = `<div class="empty"><span class="empty-icon">🌐</span><br>NO HOSTS YET<br><span class="empty-hint">Press SCAN LAN to search your network</span></div>`;
+  el('netCnt').textContent = '0';
+  el('netLog').innerHTML   = '';
+  el('netProgWrap').style.display = 'none';
+  hideWarn('netWarn');
+  setStatus('netStatus', 'READY', '');
+}
+/* js/qr.js — QR / Barcode Scanner */
+
+let qrStream = null;
+let qrAF     = null;
+let qrActive = false;
+let qrSeen   = [];
+let barcodeDetector = null;
+
+async function startQR() {
+  hideWarn('qrWarn');
+
+  // Check BarcodeDetector API
+  if (!('BarcodeDetector' in window)) {
+    showWarn('qrWarn',
+      '⚠ BarcodeDetector API not supported. Use Chrome 83+ on Android or Chrome/Edge on desktop. ' +
+      'Safari iOS does not support this API.'
+    );
+    // Still start camera so user can at least see the feed
+  }
+
+  try {
+    // Request camera — prefer back camera on mobile
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1280 },
+        height: { ideal: 720 },
+      }
+    });
+
+    const vid = el('qrVideo');
+    vid.srcObject = qrStream;
+
+    el('camWrap').style.display   = 'block';
+    el('qrStartBtn').style.display = 'none';
+    el('qrStopBtn').style.display  = 'inline-flex';
+    document.querySelector('[data-tab="qr"]').classList.add('scanning');
+    setStatus('qrStatus', 'SCANNING — AIM AT CODE', 'busy');
+    qrActive = true;
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const fmts = await BarcodeDetector.getSupportedFormats();
+        barcodeDetector = new BarcodeDetector({ formats: fmts });
+        log_start('Supported formats: ' + fmts.join(', '));
+      } catch (e) {
+        barcodeDetector = new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'data_matrix', 'pdf417'] });
+      }
+      qrFrame();
+    } else {
+      setStatus('qrStatus', 'CAM ACTIVE — NO BARCODE API', 'w');
+    }
+
+  } catch (err) {
+    let msg = '⚠ Camera error: ' + err.message;
+    if (err.name === 'NotAllowedError') msg = '⚠ Camera permission denied. Allow camera access and try again.';
+    if (err.name === 'NotFoundError')   msg = '⚠ No camera found on this device.';
+    showWarn('qrWarn', msg);
+    setStatus('qrStatus', 'CAMERA ERROR', 'err');
+  }
+}
+
+function log_start(msg) {
+  // internal — not exposed
+}
+
+async function qrFrame() {
+  if (!qrActive) return;
+  const vid = el('qrVideo');
+
+  if (vid.readyState >= 2 && barcodeDetector) {
+    try {
+      const codes = await barcodeDetector.detect(vid);
+      for (const code of codes) {
+        if (!qrSeen.includes(code.rawValue)) {
+          qrSeen.push(code.rawValue);
+          renderQRResult(code.rawValue, code.format);
+          el('qrCnt').textContent = qrSeen.length;
+          setStatus('qrStatus', qrSeen.length + ' CODE(S) FOUND', 'ok');
+          // Flash
+          el('camWrap').style.boxShadow = '0 0 20px var(--accent)';
+          setTimeout(() => { el('camWrap').style.boxShadow = ''; }, 300);
+        }
+      }
+    } catch (e) {
+      // Detection frame error — non-fatal
+    }
+  }
+
+  qrAF = requestAnimationFrame(qrFrame);
+}
+
+function renderQRResult(val, fmt) {
+  const wrap = el('qrResults');
+  wrap.querySelector('.empty')?.remove();
+
+  // Classify content
+  let type = 'TEXT';
+  let action = null;
+
+  if (/^https?:\/\//i.test(val))         { type = 'URL';         action = `<a href="${escAttr(val)}" target="_blank" rel="noopener">Open Link ↗</a>`; }
+  else if (val.startsWith('WIFI:'))       { type = 'WIFI CONFIG'; }
+  else if (val.startsWith('BEGIN:VCARD')) { type = 'VCARD'; }
+  else if (val.startsWith('tel:'))        { type = 'PHONE'; action = `<a href="${escAttr(val)}">Call ${esc(val.slice(4))}</a>`; }
+  else if (val.startsWith('mailto:'))     { type = 'EMAIL'; action = `<a href="${escAttr(val)}">Send Email ↗</a>`; }
+  else if (val.startsWith('geo:'))        { type = 'LOCATION'; }
+  else if (/^\d{8,}$/.test(val))          { type = 'BARCODE'; }
+  else if (val.startsWith('smsto:'))      { type = 'SMS'; }
+
+  const disp = action
+    ? `<div style="margin-top:6px;font-family:var(--vt);font-size:15px">${action}</div>`
+    : '';
+
+  const card = document.createElement('div');
+  card.className = 'qrr';
+  card.innerHTML = `
+    <div class="qrfmt">${esc((fmt || 'CODE').toUpperCase())} · ${esc(type)} · ${now()}</div>
+    <div class="qrval">${esc(val)}</div>
+    ${disp}
+  `;
+  wrap.insertBefore(card, wrap.firstChild);
+
+  // For WIFI, also parse credentials
+  if (val.startsWith('WIFI:')) {
+    const ssid = (val.match(/S:([^;]+)/) || [])[1] || '?';
+    const pass = (val.match(/P:([^;]+)/) || [])[1] || '?';
+    const enc  = (val.match(/T:([^;]+)/) || [])[1] || '?';
+    const html = makeCard(
+      'WIFI CREDENTIALS',
+      'PARSED',
+      'badge-b',
+      [
+        ['SSID',       ssid, 'hi'],
+        ['PASSWORD',   pass, ''],
+        ['ENCRYPTION', enc,  'lo'],
+      ]
+    );
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    wrap.insertBefore(d.firstElementChild, wrap.firstChild);
+  }
+
+  // For VCARD, parse name/phone
+  if (val.startsWith('BEGIN:VCARD')) {
+    const name  = (val.match(/FN:([^\r\n]+)/) || [])[1] || '?';
+    const phone = (val.match(/TEL[^:]*:([^\r\n]+)/) || [])[1] || 'N/A';
+    const email = (val.match(/EMAIL[^:]*:([^\r\n]+)/) || [])[1] || 'N/A';
+    const html  = makeCard('CONTACT CARD', 'VCARD', 'badge-g', [
+      ['NAME',  name,  'hi'],
+      ['PHONE', phone, ''],
+      ['EMAIL', email, ''],
+    ]);
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    wrap.insertBefore(d.firstElementChild, wrap.firstChild);
+  }
+}
+
+function escAttr(s) {
+  return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function stopQR() {
+  qrActive = false;
+  if (qrAF) cancelAnimationFrame(qrAF);
+  if (qrStream) qrStream.getTracks().forEach(t => t.stop());
+  qrStream = null;
+
+  el('camWrap').style.display   = 'none';
+  el('qrStartBtn').style.display = 'inline-flex';
+  el('qrStopBtn').style.display  = 'none';
+  document.querySelector('[data-tab="qr"]').classList.remove('scanning');
+  setStatus('qrStatus', 'STOPPED', '');
+}
+
+function clearQR() {
+  qrSeen = [];
+  el('qrResults').innerHTML = `<div class="empty"><span class="empty-icon">⬛</span><br>NO SCANS YET<br><span class="empty-hint">Aim camera at QR code or barcode</span></div>`;
+  el('qrCnt').textContent = '0';
+  setStatus('qrStatus', 'READY', '');
+}
+/* js/sensor.js — Compass, Magnetometer, Motion */
+
+let sensActive   = false;
+let magSens      = null;
+let magBaseline  = 0;
+let magHistory   = [];
+const MAG_N      = 60;
+const MAG_THRESH = 70;
+
+let compassHeading = 0;
+let compassTarget  = 0;
+let compassRAF     = null;
+
+// ── Sub-panel switching ──────────────────────
+let currentSub = 'compass';
+function showSub(id) {
+  currentSub = id;
+  document.querySelectorAll('.sub-tab').forEach(t =>
+    t.classList.toggle('active', t.id === 'subtab-' + id)
+  );
+  document.querySelectorAll('.sub-panel').forEach(p =>
+    p.classList.toggle('active', p.id === 'sub-' + id)
+  );
+  if (id === 'compass' && sensActive) startCompassDraw();
+}
+
+// ── Start all sensors ────────────────────────
+async function startSensor() {
+  hideWarn('sensWarn');
+  sensActive = true;
+
+  el('sensStartBtn').style.display = 'none';
+  el('sensStopBtn').style.display  = 'inline-flex';
+  document.querySelector('[data-tab="sensor"]').classList.add('scanning');
+
+  let started = false;
+
+  // ── Magnetometer (Chrome/Android) ──────────
+  if (window.Magnetometer) {
+    try {
+      const perm = await navigator.permissions?.query({ name: 'magnetometer' }).catch(() => ({ state: 'granted' }));
+      if (perm.state === 'denied') throw new Error('PERMISSION DENIED');
+
+      magSens = new Magnetometer({ frequency: 25 });
+      magSens.addEventListener('reading', onMagReading);
+      magSens.addEventListener('error', e => {
+        log('sensLog', 'MAG ERR: ' + (e.error?.message || 'SENSOR ERROR'), 'e');
+      });
+      magSens.start();
+      log('sensLog', 'MAGNETOMETER SENSOR ACTIVE', 'ok');
+      started = true;
+    } catch (e) {
+      log('sensLog', 'MAG SENSOR: ' + (e.message || 'NOT AVAILABLE'), 'w');
+    }
+  }
+
+  // ── DeviceOrientationEvent ──────────────────
+  if (window.DeviceOrientationEvent) {
+    const startOrientation = () => {
+      window.addEventListener('deviceorientationabsolute', onOrientEvent, true);
+      window.addEventListener('deviceorientation', onOrientEvent, true);
+      window.addEventListener('devicemotion', onMotionEvent, true);
+      if (!started) log('sensLog', 'ORIENTATION/MOTION SENSORS ACTIVE', 'ok');
+      started = true;
+    };
+
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+
+      try {
+        const state = await DeviceOrientationEvent.requestPermission();
+        if (state === 'granted') startOrientation();
+        else throw new Error('DENIED');
+      } catch (e) {
+        showWarn('sensWarn', '⚠ iOS motion permission denied. Tap the page or try again.');
+        log('sensLog', 'IOS PERMISSION: ' + (e.message || 'DENIED'), 'e');
+      }
+    } else {
+      startOrientation();
+    }
+  }
+
+  if (!started) {
+    showWarn('sensWarn', '⚠ No sensors found. Use Chrome on Android for magnetometer & compass. iOS requires user interaction for motion.');
+    setStatus('sensStatus', 'NO SENSORS', 'err');
+    stopSensor();
+    return;
+  }
+
+  setStatus('sensStatus', 'SENSORS ACTIVE', 'ok');
+  initMagGraph();
+  startCompassDraw();
+}
+
+// ── Magnetometer reading ─────────────────────
+function onMagReading() {
+  if (!magSens) return;
+  onMagValues(magSens.x, magSens.y, magSens.z);
+}
+
+function onMagValues(x, y, z) {
+  const raw = Math.sqrt(x * x + y * y + z * z);
+  const t   = Math.max(0, raw - magBaseline);
+
+  // Derive compass heading from mag X/Y
+  let deg = Math.atan2(y, x) * (180 / Math.PI);
+  deg = (deg + 360) % 360;
+  compassTarget = deg;
+
+  // Update mag display
+  el('magNum').textContent = t.toFixed(2).padStart(6, '0');
+  el('magNum').classList.toggle('hi', t > MAG_THRESH);
+
+  setAxBar('axX', 'axXv', x);
+  setAxBar('axY', 'axYv', y);
+  setAxBar('axZ', 'axZv', z);
+
+  const alert = el('magAlert');
+  if (t > MAG_THRESH) {
+    alert.style.display = 'block';
+    if (magHistory.length % 15 === 0)
+      log('sensLog', 'ANOMALY: ' + t.toFixed(1) + ' μT @ X:' + x.toFixed(0) + ' Y:' + y.toFixed(0) + ' Z:' + z.toFixed(0), 'e');
+  } else {
+    alert.style.display = 'none';
+  }
+
+  magHistory.push(t);
+  if (magHistory.length > MAG_N) magHistory.shift();
+  renderMagGraph();
+}
+
+function setAxBar(fillId, valId, v) {
+  const pct = Math.min(100, Math.abs(v) / 2);
+  el(fillId).style.width = pct + '%';
+  el(valId).textContent  = v.toFixed(1);
+}
+
+// ── DeviceOrientation ────────────────────────
+let lastAlpha = 0;
+function onOrientEvent(e) {
+  // Compass heading from absolute orientation
+  let heading = e.alpha || 0;
+  if (e.webkitCompassHeading !== undefined) {
+    heading = e.webkitCompassHeading; // iOS: already absolute
+  } else if (e.absolute === true) {
+    heading = (360 - heading) % 360;
+  }
+  compassTarget = heading;
+
+  // If no magnetometer, derive approximate mag values from orientation
+  if (!magSens) {
+    const gx = (e.gamma || 0);
+    const gy = (e.beta  || 0);
+    const gz = (e.alpha || 0);
+    onMagValues(gx * 0.6, gy * 0.6, gz * 0.15);
+  }
+
+  // Update compass text
+  updateCompassText(heading);
+  lastAlpha = heading;
+}
+
+// ── DeviceMotion ─────────────────────────────
+function onMotionEvent(e) {
+  if (!e.accelerometerIncludingGravity) return;
+  const ax = e.accelerometerIncludingGravity.x || 0;
+  const ay = e.accelerometerIncludingGravity.y || 0;
+  const az = e.accelerometerIncludingGravity.z || 0;
+
+  setAxBar('axAx', 'axAxv', ax);
+  setAxBar('axAy', 'axAyv', ay);
+  setAxBar('axAz', 'axAzv', az);
+
+  // Move ball: clamp tilt to ±9.8 m/s² (1g)
+  const ballEl = el('motionBall');
+  if (!ballEl) return;
+  const bg    = ballEl.parentElement;
+  const r     = bg.offsetWidth / 2 - 9; // radius minus ball radius
+  const bx    = Math.max(-1, Math.min(1, ax / 9.8)) * r;
+  const by    = Math.max(-1, Math.min(1, -ay / 9.8)) * r;
+  ballEl.style.left = (bg.offsetWidth  / 2 + bx) + 'px';
+  ballEl.style.top  = (bg.offsetHeight / 2 + by) + 'px';
+}
+
+// ── Compass canvas drawing ───────────────────
+function startCompassDraw() {
+  if (compassRAF) cancelAnimationFrame(compassRAF);
+  drawCompassLoop();
+}
+
+function drawCompassLoop() {
+  if (!sensActive) return;
+  // Smooth interpolation
+  const diff = ((compassTarget - compassHeading + 540) % 360) - 180;
+  compassHeading = (compassHeading + diff * 0.12 + 360) % 360;
+  updateCompassText(compassHeading);
+  drawCompass(compassHeading);
+  compassRAF = requestAnimationFrame(drawCompassLoop);
+}
+
+function updateCompassText(deg) {
+  el('compassDeg').textContent = Math.round(deg) + '°';
+  el('compassDir').textContent = getCardinal(deg);
+}
+
+function getCardinal(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function drawCompass(heading) {
+  const canvas = el('compassCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W   = canvas.width;
+  const H   = canvas.height;
+  const cx  = W / 2;
+  const cy  = H / 2;
+  const r   = Math.min(cx, cy) - 8;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  bgGrad.addColorStop(0, '#111c1a');
+  bgGrad.addColorStop(1, '#060a0e');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = bgGrad;
+  ctx.fill();
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#253530';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Tick marks
+  for (let i = 0; i < 360; i += 5) {
+    const angle = ((i - heading) * Math.PI / 180) - Math.PI / 2;
+    const isMajor = i % 45 === 0;
+    const isMed   = i % 15 === 0;
+    const inner   = isMajor ? r * 0.72 : isMed ? r * 0.78 : r * 0.84;
+    const outer   = r * 0.92;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+    ctx.strokeStyle = isMajor ? '#4a7060' : '#253530';
+    ctx.lineWidth   = isMajor ? 2 : 1;
+    ctx.stroke();
+  }
+
+  // Cardinal labels
+  const cardinals = [
+    { label: 'N', deg: 0,   color: '#ff3355' },
+    { label: 'E', deg: 90,  color: '#00cfff' },
+    { label: 'S', deg: 180, color: '#4a7060' },
+    { label: 'W', deg: 270, color: '#4a7060' },
+  ];
+  ctx.font = 'bold 11px Orbitron, sans-serif';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  for (const c of cardinals) {
+    const angle  = ((c.deg - heading) * Math.PI / 180) - Math.PI / 2;
+    const labelR = r * 0.62;
+    ctx.fillStyle = c.color;
+    ctx.fillText(c.label, cx + Math.cos(angle) * labelR, cy + Math.sin(angle) * labelR);
+  }
+
+  // Inner circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = '#253530';
+  ctx.fill();
+
+  // North needle (red)
+  const nAngle = -Math.PI / 2; // North is always pointing "up" on screen
+  drawNeedle(ctx, cx, cy, nAngle, r * 0.54, '#ff3355', 4);
+  // South needle (dim)
+  drawNeedle(ctx, cx, cy, nAngle + Math.PI, r * 0.38, '#253530', 3);
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#00ff88';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#060a0e';
+  ctx.fill();
+}
+
+function drawNeedle(ctx, cx, cy, angle, length, color, width) {
+  const tipX = cx + Math.cos(angle) * length;
+  const tipY = cy + Math.sin(angle) * length;
+  const baseL = cx + Math.cos(angle + Math.PI * 0.85) * (width * 2.5);
+  const baseR = cx + Math.cos(angle - Math.PI * 0.85) * (width * 2.5);
+  const baseLY = cy + Math.sin(angle + Math.PI * 0.85) * (width * 2.5);
+  const baseRY = cy + Math.sin(angle - Math.PI * 0.85) * (width * 2.5);
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(baseL, baseLY);
+  ctx.lineTo(baseR, baseRY);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.shadowColor = color;
+  ctx.shadowBlur  = 6;
+  ctx.fill();
+  ctx.shadowBlur  = 0;
+}
+
+// ── Mag graph ────────────────────────────────
+function initMagGraph() {
+  const g = el('magHist');
+  if (!g) return;
+  g.innerHTML = '';
+  for (let i = 0; i < MAG_N; i++) {
+    const b = document.createElement('div');
+    b.className = 'hist-bar';
+    g.appendChild(b);
+  }
+}
+
+function renderMagGraph() {
+  const bars = el('magHist')?.children;
+  if (!bars) return;
+  const mx = Math.max(1, ...magHistory);
+  for (let i = 0; i < MAG_N; i++) {
+    const v = magHistory[i] || 0;
+    if (bars[i]) {
+      bars[i].style.height = Math.max(2, Math.round(v / mx * 32)) + 'px';
+      bars[i].style.background = v > MAG_THRESH ? 'var(--red)' : v > 30 ? 'var(--accent)' : 'var(--dim2)';
+    }
+  }
+}
+
+function calSensor() {
+  const cur = parseFloat(el('magNum')?.textContent) || 0;
+  magBaseline = cur;
+  log('sensLog', 'CALIBRATED AT ' + cur.toFixed(2) + ' μT', 'd');
+  setStatus('sensStatus', 'CAL AT ' + cur.toFixed(1) + ' μT', 'ok');
+}
+
+function stopSensor() {
+  sensActive = false;
+  if (magSens) { try { magSens.stop(); } catch (e) {} magSens = null; }
+  if (compassRAF) cancelAnimationFrame(compassRAF);
+  window.removeEventListener('deviceorientation', onOrientEvent, true);
+  window.removeEventListener('deviceorientationabsolute', onOrientEvent, true);
+  window.removeEventListener('devicemotion', onMotionEvent, true);
+
+  el('sensStartBtn').style.display = 'inline-flex';
+  el('sensStopBtn').style.display  = 'none';
+  el('magAlert').style.display     = 'none';
+  document.querySelector('[data-tab="sensor"]').classList.remove('scanning');
+  setStatus('sensStatus', 'STOPPED', '');
+  log('sensLog', 'SENSORS STOPPED', 'w');
+}
+/* js/audio.js — Microphone Spectrum Analyzer */
+
+let audioCtx     = null;
+let analyser     = null;
+let micStream    = null;
+let audioRAF     = null;
+let audioActive  = false;
+let audioMode    = 'fft'; // 'fft' | 'wave'
+
+// Peak hold
+let dbPeakValue  = -100;
+let dbPeakTimer  = 0;
+
+// Waterfall data
+let waterfallData = [];
+const WF_ROWS     = 80;
+
+function initAudioCanvas() {
+  resizeAudioCanvas();
+  window.addEventListener('resize', resizeAudioCanvas);
+}
+
+function resizeAudioCanvas() {
+  const ac = el('audioCanvas');
+  const wc = el('waterfallCanvas');
+  if (!ac || !wc) return;
+  const w = ac.parentElement?.offsetWidth || 300;
+  ac.width  = w; ac.height  = 120;
+  wc.width  = w; wc.height  = wc.parentElement?.offsetHeight || 80;
+}
+
+async function startAudio() {
+  if (audioActive) return;
+  hideWarn('audioWarn');
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl:  false,
+    }, video: false });
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize                = 2048;
+    analyser.smoothingTimeConstant  = 0.75;
+    analyser.minDecibels            = -90;
+    analyser.maxDecibels            = -10;
+
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+
+    audioActive = true;
+    waterfallData = [];
+
+    el('audioStartBtn').style.display = 'none';
+    el('audioStopBtn').style.display  = 'inline-flex';
+    document.querySelector('[data-tab="audio"]').classList.add('scanning');
+    setStatus('audioStatus', 'SCANNING FREQUENCIES...', 'busy');
+    log('audioLog', 'MIC ACTIVE — SAMPLE RATE: ' + audioCtx.sampleRate + ' Hz', 'ok');
+
+    resizeAudioCanvas();
+    drawAudioLoop();
+
+  } catch (err) {
+    let msg = '⚠ Microphone error: ' + err.message;
+    if (err.name === 'NotAllowedError') msg = '⚠ Microphone permission denied. Allow access and try again.';
+    if (err.name === 'NotFoundError')   msg = '⚠ No microphone found on this device.';
+    setStatus('audioStatus', 'MIC ERROR', 'err');
+    log('audioLog', 'MIC ERR: ' + err.message, 'e');
+
+    // Show inline warning
+    const warns = el('audioLog');
+    if (warns) {
+      const d = document.createElement('div');
+      d.className = 'warnb show';
+      d.textContent = msg;
+      warns.parentElement?.insertBefore(d, warns);
+    }
+  }
+}
+
+function drawAudioLoop() {
+  if (!audioActive) return;
+  audioRAF = requestAnimationFrame(drawAudioLoop);
+
+  const bufLen = analyser.frequencyBinCount; // fftSize / 2
+  const freqBuf = new Uint8Array(bufLen);
+  const timeBuf = new Uint8Array(analyser.fftSize);
+  analyser.getByteFrequencyData(freqBuf);
+  analyser.getByteTimeDomainData(timeBuf);
+
+  // dB from frequency data
+  let maxFreq = 0, maxIdx = 0;
+  let sumSq = 0;
+  for (let i = 0; i < bufLen; i++) {
+    if (freqBuf[i] > maxFreq) { maxFreq = freqBuf[i]; maxIdx = i; }
+    sumSq += freqBuf[i] * freqBuf[i];
+  }
+  const rms = Math.sqrt(sumSq / bufLen);
+  const db  = rms > 0 ? 20 * Math.log10(rms / 255) : -100;
+
+  // Peak hold
+  dbPeakTimer++;
+  if (db > dbPeakValue) { dbPeakValue = db; dbPeakTimer = 0; }
+  if (dbPeakTimer > 60) dbPeakValue -= 0.3;
+
+  // Map dB (-60 to 0) to 0-100%
+  const dbMin = -60, dbMax = 0;
+  const dbPct  = Math.max(0, Math.min(100, (db - dbMin) / (dbMax - dbMin) * 100));
+  const peakPct = Math.max(0, Math.min(100, (dbPeakValue - dbMin) / (dbMax - dbMin) * 100));
+
+  el('dbFill').style.width  = dbPct + '%';
+  el('dbPeak').style.left   = peakPct + '%';
+
+  // Stats
+  const nyquist  = audioCtx.sampleRate / 2;
+  const peakHz   = Math.round(maxIdx / bufLen * nyquist);
+  el('peakFreq').textContent  = peakHz > 0 ? peakHz + ' Hz' : '--- Hz';
+  el('audioLevel').textContent = db > -90 ? db.toFixed(1) + ' dB' : '-∞ dB';
+  el('audioBand').textContent  = freqBand(peakHz);
+  el('audioClip').textContent  = db > -3 ? 'CLIP!' : 'SAFE';
+  el('audioClip').style.color  = db > -3 ? 'var(--red)' : 'var(--accent)';
+
+  // Draw
+  if (audioMode === 'fft') {
+    drawFFT(freqBuf);
+  } else {
+    drawWaveform(timeBuf);
+  }
+  drawWaterfall(freqBuf);
+}
+
+function drawFFT(freqBuf) {
+  const canvas = el('audioCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#0d2018';
+  ctx.lineWidth   = 1;
+  for (let i = 0; i < 8; i++) {
+    const x = (i / 8) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let i = 0; i < 4; i++) {
+    const y = (i / 4) * H;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Bars — only draw first ~half (most audio is below 8 kHz)
+  const draw = Math.floor(freqBuf.length * 0.6);
+  const bw   = W / draw;
+
+  for (let i = 0; i < draw; i++) {
+    const v = freqBuf[i] / 255;
+    const bh = v * H;
+    const x  = i * bw;
+
+    // Color: green → yellow → red based on level
+    const hue = 140 - v * 100; // 140 (green) → 40 (yellow) → 0 (red) ?
+    const light = 40 + v * 30;
+    ctx.fillStyle = `hsl(${hue}, 100%, ${light}%)`;
+    ctx.fillRect(x, H - bh, Math.max(1, bw - 1), bh);
+
+    // Glow for peaks
+    if (v > 0.7) {
+      ctx.fillStyle = `rgba(0,255,136,0.15)`;
+      ctx.fillRect(x, H - bh - 2, Math.max(1, bw - 1), 4);
+    }
+  }
+
+  // Frequency axis labels
+  ctx.fillStyle = '#253530';
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  const nyquist = audioCtx?.sampleRate / 2 || 22050;
+  [500, 1000, 2000, 4000, 8000].forEach(hz => {
+    const x = (hz / (nyquist * 0.6)) * W;
+    if (x < W) {
+      ctx.fillText(hz >= 1000 ? (hz / 1000) + 'k' : hz, x, H - 3);
+    }
+  });
+}
+
+function drawWaveform(timeBuf) {
+  const canvas = el('audioCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Center line
+  ctx.strokeStyle = '#0d2018';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
+
+  // Waveform
+  ctx.beginPath();
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth   = 1.5;
+  ctx.shadowColor = '#00ff88';
+  ctx.shadowBlur  = 4;
+
+  const step = W / timeBuf.length;
+  for (let i = 0; i < timeBuf.length; i++) {
+    const y = ((timeBuf[i] / 255) - 0.5) * H + H / 2;
+    if (i === 0) ctx.moveTo(0, y);
+    else ctx.lineTo(i * step, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawWaterfall(freqBuf) {
+  const canvas = el('waterfallCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  if (W === 0 || H === 0) return;
+
+  const draw = Math.floor(freqBuf.length * 0.6);
+
+  // Shift existing image down by 1 row
+  if (H > 1) {
+    const rowH = Math.max(1, Math.floor(H / WF_ROWS));
+    const img  = ctx.getImageData(0, 0, W, H - rowH);
+    ctx.putImageData(img, 0, rowH);
+  }
+
+  // Draw new row at top
+  const rowH = Math.max(1, Math.floor(H / WF_ROWS));
+  for (let i = 0; i < draw; i++) {
+    const v = freqBuf[i] / 255;
+    const x = Math.floor(i / draw * W);
+    const w = Math.max(1, Math.ceil(W / draw));
+
+    // Color map: black → blue → cyan → green → yellow → red
+    ctx.fillStyle = spectralColor(v);
+    ctx.fillRect(x, 0, w, rowH);
+  }
+}
+
+function spectralColor(v) {
+  // 0 = black, 0.25 = deep blue, 0.5 = cyan/green, 0.75 = yellow, 1 = red
+  if (v < 0.01) return '#000';
+  if (v < 0.25) {
+    const t = v / 0.25;
+    return `rgb(0,${Math.round(t*100)},${Math.round(t*180)})`;
+  }
+  if (v < 0.5) {
+    const t = (v - 0.25) / 0.25;
+    return `rgb(0,${Math.round(100+t*155)},${Math.round(180-t*80)})`;
+  }
+  if (v < 0.75) {
+    const t = (v - 0.5) / 0.25;
+    return `rgb(${Math.round(t*200)},255,${Math.round(100-t*100)})`;
+  }
+  const t = (v - 0.75) / 0.25;
+  return `rgb(255,${Math.round(255-t*200)},0)`;
+}
+
+function freqBand(hz) {
+  if (hz < 20)    return 'SUB-SONIC';
+  if (hz < 250)   return 'SUB BASS';
+  if (hz < 500)   return 'BASS';
+  if (hz < 2000)  return 'MID';
+  if (hz < 4000)  return 'HI-MID';
+  if (hz < 8000)  return 'PRESENCE';
+  if (hz < 16000) return 'BRILLIANCE';
+  return 'ULTRA-HI';
+}
+
+function toggleAudioMode() {
+  audioMode = audioMode === 'fft' ? 'wave' : 'fft';
+  el('audioModeBtn').textContent = audioMode === 'fft' ? 'FFT' : 'WAVE';
+  log('audioLog', 'MODE: ' + audioMode.toUpperCase(), 'd');
+}
+
+function stopAudio() {
+  audioActive = false;
+  if (audioRAF) cancelAnimationFrame(audioRAF);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) { try { audioCtx.close(); } catch (e) {} }
+  micStream = audioCtx = analyser = null;
+
+  el('audioStartBtn').style.display = 'inline-flex';
+  el('audioStopBtn').style.display  = 'none';
+  document.querySelector('[data-tab="audio"]').classList.remove('scanning');
+  setStatus('audioStatus', 'STOPPED', '');
+  log('audioLog', 'MIC STOPPED', 'w');
+
+  // Clear canvases
+  ['audioCanvas', 'waterfallCanvas'].forEach(id => {
+    const c = el(id);
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  });
+}
+/* js/tv.js — Smart TV Remote Control */
+
+let tvProto     = 'samsung';
+let tvWS        = null;
+let tvConnected = false;
+
+const BRAND_INFO = {
+  samsung:   { name:'Samsung Smart TV',   color:'var(--orange)', badge:'TIZEN OS' },
+  lg:        { name:'LG Smart TV',        color:'var(--red)',    badge:'WEBOS' },
+  roku:      { name:'Roku TV',            color:'var(--blue)',   badge:'ROKU OS' },
+  sony:      { name:'Sony BRAVIA',        color:'var(--blue)',   badge:'ANDROID TV' },
+  philips:   { name:'Philips Smart TV',   color:'var(--blue)',   badge:'ANDROID/SAPHI' },
+  androidtv: { name:'Android / Google TV',color:'var(--accent)', badge:'ANDROID TV' },
+};
+
+// ── Key maps ─────────────────────────────────
+const TV_KEYMAPS = {
+  samsung: {
+    POWER:'KEY_POWER', VOL_UP:'KEY_VOLUP', VOL_DOWN:'KEY_VOLDOWN',
+    MUTE:'KEY_MUTE',   CH_UP:'KEY_CHUP',   CH_DOWN:'KEY_CHDOWN',
+    UP:'KEY_UP',       DOWN:'KEY_DOWN',     LEFT:'KEY_LEFT',     RIGHT:'KEY_RIGHT',
+    OK:'KEY_ENTER',    BACK:'KEY_RETURN',   HOME:'KEY_HOME',     SOURCE:'KEY_SOURCE',
+    PREV:'KEY_REWIND', NEXT:'KEY_FF',
+    '1':'KEY_1','2':'KEY_2','3':'KEY_3','4':'KEY_4','5':'KEY_5',
+    '6':'KEY_6','7':'KEY_7','8':'KEY_8','9':'KEY_9','0':'KEY_0',
+  },
+  lg: {
+    POWER:'POWER',   VOL_UP:'VOLUMEUP',    VOL_DOWN:'VOLUMEDOWN',
+    MUTE:'MUTE',     CH_UP:'CHANNELUP',    CH_DOWN:'CHANNELDOWN',
+    UP:'UP',         DOWN:'DOWN',           LEFT:'LEFT',    RIGHT:'RIGHT',
+    OK:'ENTER',      BACK:'BACK',           HOME:'HOME',    SOURCE:'EXTERNAL_INPUT',
+    PREV:'REWIND',   NEXT:'FAST_FORWARD',
+    '1':'1','2':'2','3':'3','4':'4','5':'5',
+    '6':'6','7':'7','8':'8','9':'9','0':'0',
+  },
+  roku: {
+    POWER:'power',   VOL_UP:'volume_up',   VOL_DOWN:'volume_down',
+    MUTE:'volume_mute', CH_UP:'channel_up', CH_DOWN:'channel_down',
+    UP:'up',         DOWN:'down',           LEFT:'left',    RIGHT:'right',
+    OK:'select',     BACK:'back',           HOME:'home',    SOURCE:'input_av1',
+    PREV:'Rev',      NEXT:'Fwd',
+    '1':'Lit_1','2':'Lit_2','3':'Lit_3','4':'Lit_4','5':'Lit_5',
+    '6':'Lit_6','7':'Lit_7','8':'Lit_8','9':'Lit_9','0':'Lit_0',
+  },
+  sony: {
+    POWER:'AAAAAQAAAAEAAAAVAw==',  VOL_UP:'AAAAAQAAAAEAAAASAw==',  VOL_DOWN:'AAAAAQAAAAEAAAATAw==',
+    MUTE:'AAAAAQAAAAEAAAAUAw==',   CH_UP:'AAAAAQAAAAEAAAAQAw==',   CH_DOWN:'AAAAAQAAAAEAAAARAw==',
+    UP:'AAAAAQAAAAEAAAB0Aw==',    DOWN:'AAAAAQAAAAEAAAB1Aw==',    LEFT:'AAAAAQAAAAEAAAB2Aw==',  RIGHT:'AAAAAQAAAAEAAAB3Aw==',
+    OK:'AAAAAQAAAAEAAABlAw==',     BACK:'AAAAAgAAAJcAAAAjAw==',    HOME:'AAAAAQAAAAEAAABgAw==',  SOURCE:'AAAAAQAAAAEAAAAkAw==',
+    PREV:'AAAAAgAAAJcAAAAhAw==',   NEXT:'AAAAAgAAAJcAAAAiAw==',
+    '1':'AAAAAQAAAAEAAAAAAw==','2':'AAAAAQAAAAEAAAABAw==','3':'AAAAAQAAAAEAAAACAw==',
+    '4':'AAAAAQAAAAEAAAADAw==','5':'AAAAAQAAAAEAAAAEAw==','6':'AAAAAQAAAAEAAAAFAw==',
+    '7':'AAAAAQAAAAEAAAAGAw==','8':'AAAAAQAAAAEAAAAHAw==','9':'AAAAAQAAAAEAAAAIAw==','0':'AAAAAQAAAAEAAAA9Aw==',
+  },
+  philips: {
+    // Philips JointSpace API on port 1925
+    POWER:'standby', VOL_UP:'VolumeUp', VOL_DOWN:'VolumeDown',
+    MUTE:'Mute',     CH_UP:'ChannelStepUp', CH_DOWN:'ChannelStepDown',
+    UP:'CursorUp',   DOWN:'CursorDown', LEFT:'CursorLeft', RIGHT:'CursorRight',
+    OK:'Confirm',    BACK:'Back',       HOME:'Home',        SOURCE:'Source',
+    PREV:'FastRewind', NEXT:'FastForward',
+    '1':'Digit1','2':'Digit2','3':'Digit3','4':'Digit4','5':'Digit5',
+    '6':'Digit6','7':'Digit7','8':'Digit8','9':'Digit9','0':'Digit0',
+  },
+  androidtv: {
+    POWER:'POWER',   VOL_UP:'VOLUME_UP',   VOL_DOWN:'VOLUME_DOWN',
+    MUTE:'MUTE',     CH_UP:'CHANNEL_UP',   CH_DOWN:'CHANNEL_DOWN',
+    UP:'DPAD_UP',    DOWN:'DPAD_DOWN',     LEFT:'DPAD_LEFT',  RIGHT:'DPAD_RIGHT',
+    OK:'DPAD_CENTER',BACK:'BACK',          HOME:'HOME',        SOURCE:'TV_INPUT',
+    PREV:'MEDIA_REWIND', NEXT:'MEDIA_FAST_FORWARD',
+    '1':'1','2':'2','3':'3','4':'4','5':'5',
+    '6':'6','7':'7','8':'8','9':'9','0':'0',
+  },
+};
+
+function selProto(p) {
+  tvProto = p;
+  document.querySelectorAll('.proto-btn').forEach(b =>
+    b.classList.toggle('active', b.id === 'proto-' + p)
+  );
+
+  // Update brand label
+  const info = BRAND_INFO[p];
+  if (info) {
+    el('remoteBrand').innerHTML =
+      `<span style="color:${info.color}">● ${info.name}</span>` +
+      `<span style="color:var(--border);margin-left:8px">${info.badge}</span>`;
+  }
+
+  // Disconnect if switching protocol
+  if (tvWS) { try { tvWS.close(); } catch (e) {} tvWS = null; }
+  tvConnected = false;
+  setTVUI('', '', el('tvIP').value ? '' : 'SELECT PROTOCOL — ENTER IP — CONNECT');
+  log('tvLog', 'PROTOCOL: ' + p.toUpperCase(), '');
+}
+
+// ── Connect ───────────────────────────────────
+async function tvConnect() {
+  const ip = el('tvIP').value.trim();
+  if (!ip) { setTVUI('err', 'error', 'ENTER TV IP ADDRESS FIRST'); return; }
+
+  // Close existing
+  if (tvWS) { try { tvWS.close(); } catch (e) {} tvWS = null; }
+  tvConnected = false;
+
+  setTVUI('on', '', 'CONNECTING TO ' + ip + '...');
+  el('tvIP').className  = 'tv-ip-in';
+  el('tvConnectBtn').disabled  = true;
+  el('tvConnectTxt').textContent = '...';
+  log('tvLog', 'CONNECT: ' + ip + ' PROTO: ' + tvProto.toUpperCase(), 'w');
+
+  let ok = false;
+
+  if (tvProto === 'samsung') {
+    ok = await connectSamsungWS(ip);
+    if (!ok) ok = await probeHTTP(ip, `http://${ip}:8001/api/v2/`);
+  } else if (tvProto === 'lg') {
+    ok = await connectLGWS(ip);
+    if (!ok) ok = await probeHTTP(ip, `http://${ip}:3000`);
+  } else if (tvProto === 'philips') {
+    ok = await probeHTTP(ip, `http://${ip}:1925/1/system`);
+  } else if (tvProto === 'roku') {
+    ok = await probeHTTP(ip, `http://${ip}:8060/query/device-info`);
+  } else if (tvProto === 'sony') {
+    ok = await probeHTTP(ip, `http://${ip}/sony/system`);
+  } else if (tvProto === 'androidtv') {
+    ok = await probeHTTP(ip, `http://${ip}:8008/setup/eureka_info`);
+  }
+
+  el('tvConnectBtn').disabled    = false;
+  el('tvConnectTxt').textContent = tvConnected ? 'RECONNECT' : 'CONNECT';
+  el('tvConnectBtn').className   = 'btn-connect ' + (tvConnected ? 'connected' : '');
+
+  if (!ok) {
+    el('tvIP').className = 'tv-ip-in error';
+    setTVUI('err', 'err', 'UNREACHABLE — CHECK IP & NETWORK');
+    log('tvLog', 'CONNECTION FAILED: ' + ip, 'e');
+  }
+}
+
+async function connectSamsungWS(ip) {
+  for (const port of [8001, 8002]) {
+    try {
+      const ws = new WebSocket(`ws://${ip}:${port}/api/v2/channels/samsung.remote.control`);
+      await new Promise((res, rej) => {
+        const t = setTimeout(() => { ws.close(); rej(new Error('TIMEOUT')); }, 4000);
+        ws.onopen  = () => { clearTimeout(t); res(); };
+        ws.onerror = () => { clearTimeout(t); rej(new Error('WS ERROR')); };
+      });
+      tvWS = ws; tvConnected = true;
+      ws.onmessage = m => {
+        try { const d = JSON.parse(m.data); log('tvLog', 'RX: ' + (d.event || 'MSG'), 'd'); }
+        catch (e) {}
+      };
+      ws.onclose = () => {
+        tvConnected = false;
+        setTVUI('err', 'err', 'DISCONNECTED — RECONNECT');
+        el('tvIP').className = 'tv-ip-in';
+        log('tvLog', 'WS CLOSED', 'w');
+      };
+      // Handshake
+      ws.send(JSON.stringify({
+        method: 'ms.channel.connect',
+        params: { name: btoa('NEXUS SCANNER'), id: 'nexus-scanner', token: '0' }
+      }));
+      el('tvIP').className = 'tv-ip-in connected';
+      setTVUI('ok', 'ok', 'CONNECTED: ' + ip + ':' + port + ' (SAMSUNG WS)');
+      log('tvLog', 'SAMSUNG WS CONNECTED PORT ' + port, 'ok');
+      return true;
+    } catch (e) {
+      log('tvLog', 'PORT ' + port + ': ' + (e.message || 'FAILED'), '');
+    }
+  }
+  return false;
+}
+
+async function connectLGWS(ip) {
+  try {
+    const ws = new WebSocket(`ws://${ip}:3000`);
+    await new Promise((res, rej) => {
+      const t = setTimeout(() => { ws.close(); rej(new Error('TIMEOUT')); }, 4000);
+      ws.onopen  = () => { clearTimeout(t); res(); };
+      ws.onerror = () => { clearTimeout(t); rej(new Error('WS ERROR')); };
+    });
+    tvWS = ws; tvConnected = true;
+    ws.onmessage = m => {
+      try {
+        const d = JSON.parse(m.data);
+        if (d.type === 'registered') log('tvLog', 'LG: PAIRING ACCEPTED', 'ok');
+        else log('tvLog', 'RX: ' + (d.type || 'MSG'), 'd');
+      } catch (e) {}
+    };
+    ws.onclose = () => {
+      tvConnected = false;
+      setTVUI('err', 'err', 'DISCONNECTED');
+      el('tvIP').className = 'tv-ip-in';
+      log('tvLog', 'LG WS CLOSED', 'w');
+    };
+    // LG register — shows pairing prompt on TV
+    ws.send(JSON.stringify({
+      id: 'nexus-reg',
+      type: 'register',
+      payload: {
+        pairingType: 'PROMPT',
+        manifest: {
+          appDescription: 'NEXUS Scanner',
+          permissions: ['CONTROL_INPUT_TV', 'CONTROL_POWER', 'CONTROL_AUDIO', 'CONTROL_DISPLAY']
+        }
+      }
+    }));
+    el('tvIP').className = 'tv-ip-in connected';
+    setTVUI('ok', 'ok', 'CONNECTED: ' + ip + ':3000 — ACCEPT PROMPT ON TV');
+    log('tvLog', 'LG WEBOS WS CONNECTED — ACCEPT PAIRING PROMPT ON TV SCREEN', 'ok');
+    return true;
+  } catch (e) {
+    log('tvLog', 'LG WS FAIL: ' + (e.message || 'ERROR'), '');
+    return false;
+  }
+}
+
+async function probeHTTP(ip, url) {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 3500);
+    await fetch(url, { signal: ctrl.signal, mode: 'no-cors' });
+    tvConnected = true;
+    el('tvIP').className = 'tv-ip-in connected';
+    setTVUI('ok', 'ok', 'REACHABLE: ' + ip + ' (' + tvProto.toUpperCase() + ')');
+    log('tvLog', 'HTTP REACHABLE: ' + ip, 'ok');
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      // TypeError means server responded (CORS blocked) = host IS there
+      tvConnected = true;
+      el('tvIP').className = 'tv-ip-in connected';
+      setTVUI('ok', 'ok', 'REACHABLE: ' + ip + ' (' + tvProto.toUpperCase() + ')');
+      log('tvLog', 'HTTP REACHABLE (CORS): ' + ip, 'ok');
+      return true;
+    }
+    return false;
+  }
+}
+
+// ── Send key ──────────────────────────────────
+async function tvKey(key) {
+  const ip = el('tvIP').value.trim();
+  if (!ip) { setTVUI('err', 'err', 'ENTER TV IP FIRST'); return; }
+
+  flashKey(key);
+  const keyCode = TV_KEYMAPS[tvProto]?.[key] || key;
+  log('tvLog', 'KEY: ' + key + ' → ' + keyCode, '');
+
+  if (tvProto === 'samsung') {
+    if (tvWS && tvWS.readyState === 1) {
+      tvWS.send(JSON.stringify({
+        method: 'ms.remote.control',
+        params: { Cmd:'Click', DataOfCmd:keyCode, Option:false, TypeOfRemote:'SendRemoteKey' }
+      }));
+      log('tvLog', 'WS SENT: ' + keyCode, 'ok');
+    } else {
+      await sendHTTP('POST', `http://${ip}:8001/api/v2/channels/samsung.remote.control`,
+        JSON.stringify({ method:'ms.remote.control', params:{ Cmd:'Click', DataOfCmd:keyCode } }));
+    }
+
+  } else if (tvProto === 'lg') {
+    if (tvWS && tvWS.readyState === 1) {
+      // ✅ FIXED: removed stray '+' from URI strings
+      tvWS.send(JSON.stringify({
+        id: 'key-' + Date.now(),
+        type: 'request',
+        uri: 'ssap://com.webos.service.avcontrol/sendIntentToApp',
+        payload: { intent: { action: 'android.intent.action.VIEW' }, params: { key: keyCode } }
+      }));
+      log('tvLog', 'LG WS SENT: ' + keyCode, 'ok');
+    } else {
+      log('tvLog', 'LG: NOT CONNECTED — PRESS CONNECT', 'e');
+    }
+
+  } else if (tvProto === 'roku') {
+    await sendHTTP('POST', `http://${ip}:8060/keypress/${keyCode}`, null);
+
+  } else if (tvProto === 'sony') {
+    const soap = `<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:X_SendIRCC xmlns:u="urn:schemas-sony-com:service:IRCC:1"><IRCCCode>${keyCode}</IRCCCode></u:X_SendIRCC></s:Body></s:Envelope>`;
+    await sendHTTP('POST', `http://${ip}/sony/IRCC`, soap,
+      { 'Content-Type':'text/xml', 'SOAPACTION':'"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"' });
+
+  } else if (tvProto === 'philips') {
+    // Philips JointSpace REST API
+    await sendHTTP('POST', `http://${ip}:1925/1/input/key`,
+      JSON.stringify({ key: keyCode }),
+      { 'Content-Type': 'application/json' });
+
+  } else if (tvProto === 'androidtv') {
+    log('tvLog', 'ANDROID TV: ADB-OVER-NETWORK REQUIRED (BROWSER LIMITATION)', 'w');
+  }
+}
+
+async function sendHTTP(method, url, body, headers = {}) {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 2500);
+    await fetch(url, {
+      method,
+      body:    body || undefined,
+      headers: { ...headers },
+      signal:  ctrl.signal,
+      mode:    'no-cors',
+    });
+    log('tvLog', 'HTTP SENT → ' + url.split('/').slice(-2).join('/'), 'ok');
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      // no-cors TypeError = server responded
+      log('tvLog', 'SENT (CORS): ' + (e.message || 'OK'), 'ok');
+    } else {
+      log('tvLog', 'TIMEOUT: ' + (e.message || ''), 'e');
+    }
+  }
+}
+
+function flashKey(key) {
+  document.querySelectorAll('.rkey').forEach(b => {
+    if (b.getAttribute('onclick')?.includes("'" + key + "'")) {
+      b.classList.add('pressed');
+      setTimeout(() => b.classList.remove('pressed'), 180);
+    }
+  });
+}
+
+function setTVUI(dotClass, txtClass, msg) {
+  const dot = el('tvDot');
+  const txt = el('tvStatusBar');
+  if (dot) dot.className = 'tv-dot ' + dotClass;
+  if (txt) { txt.textContent = msg; txt.className = 'tv-status-txt ' + txtClass; }
+}
+
+// Init
+log('tvLog', 'TV REMOTE READY — SELECT PROTOCOL & ENTER IP', '');
+selProto('samsung');
+
+</script>
+</body>
+</html>
