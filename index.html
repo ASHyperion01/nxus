@@ -9,53 +9,52 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FlipperRemote">
 <title>FlipperRemote</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="device" id="device">
-  <button class="side-btn side-up"   id="sideUp">+</button>
-  <button class="side-btn side-down" id="sideDown">−</button>
-  <div class="top-bar">
-    <div class="usb-c"></div>
+<div class="device">
+  <button class="side-btn sv-up"   id="sideUp">+</button>
+  <button class="side-btn sv-dn"   id="sideDown">−</button>
+  <div class="topbar">
+    <div class="usb"></div>
     <div class="leds">
-      <span class="led"     id="ledG"></span>
-      <span class="led lo"  id="ledO"></span>
-      <span class="led lr"  id="ledR"></span>
+      <span class="led"    id="ledG"></span>
+      <span class="led lo" id="ledO"></span>
+      <span class="led lr" id="ledR"></span>
     </div>
   </div>
-  <div class="screen-frame">
-    <div class="screen" id="screen">
-      <div class="statusbar">
-        <span id="sbTitle">FLIPPER REMOTE</span>
-        <div class="sbright">
-          <span id="sbBt"   class="sbi">BT</span>
-          <span id="sbNfc"  class="sbi">NFC</span>
-          <span id="sbNet"  class="sbi">~~~</span>
-          <span id="sbBat"  class="sbi">---</span>
+  <div class="scr-frame">
+    <div class="screen">
+      <div class="sbar">
+        <span id="sbarTitle">FLIPPER REMOTE</span>
+        <div class="sbar-r">
+          <span class="sbi" id="sBt">BT</span>
+          <span class="sbi" id="sNfc">NFC</span>
+          <span class="sbi" id="sNet">NET</span>
+          <span class="sbi" id="sBat">---</span>
         </div>
       </div>
-      <div class="scr-body" id="scrBody"></div>
+      <div class="scr" id="scr"></div>
       <div class="phosphor"></div>
       <div class="scanlines"></div>
     </div>
-    <div class="ir-dot" id="irDot"></div>
+    <div class="ir" id="ir"></div>
   </div>
-  <div class="controls">
+  <div class="ctrls">
     <button class="btn-back" id="btnBack">◄ BACK</button>
     <div class="dpad">
-      <button class="dp dp-u" id="dpU">▲</button>
-      <div class="dp-row">
-        <button class="dp dp-l" id="dpL">◄</button>
-        <button class="dp dp-ok" id="dpOk">OK</button>
-        <button class="dp dp-r" id="dpR">►</button>
+      <button class="dp dpu" id="dpu">▲</button>
+      <div class="dprow">
+        <button class="dp dpl" id="dpl">◄</button>
+        <button class="dp dpok" id="dpok">OK</button>
+        <button class="dp dpr" id="dpr">►</button>
       </div>
-      <button class="dp dp-d" id="dpD">▼</button>
+      <button class="dp dpd" id="dpd">▼</button>
     </div>
   </div>
   <div class="ctx" id="ctx"></div>
-  <div class="brand">FLIPPER REMOTE ◈ v2.0</div>
+  <div class="brand">FLIPPER REMOTE ◈ v3.0</div>
 </div>
 <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
