@@ -25,31 +25,6 @@ const PIXEL_LOGO = [
 /* ================================================
    FAKE DEVICE POOLS
 ================================================ */
-const FAKE_WIFI = [
-  'TELE2_HOME_5G','UPC1234567','Vodafone-A4B2','dlink-GUEST',
-  'FRITZ!Box 7590','Telenet-B82A','ASUS_RT-AX88U','SKY12345',
-  'VM123456-2G','AndroidAP_5G','iPhone-of-J','TP-LINK_3F20',
-  'Netgear_EXT','ORBI99','HomeNetwork_HID','CoxWifi-Guest',
-  'SSID_HIDDEN','[hidden]','DIRECT-roku-123','HP-Print-7E',
-  'XFINITY_3B2F','BT-Hub6-AABC','Linksys00123','ATT-WIFI-4F',
-  'Spectrum_7G2B','Starlink','MEO-WiFi-5G','NOS_WIFI_44A1',
-];
-const FAKE_BT = [
-  'AirPods Pro','JBL Flip 6','Galaxy Buds2','WH-1000XM5',
-  'Pixel Buds A','Bose QC45','Mi Band 7','Apple Watch S8',
-  'Tile Mate','Logitech MX','Xbox Controller','PS5 DualSense',
-  'Fitbit Charge5','Amazfit GTR','BeatsX','SOUNDPEATS T3',
-  'Anker Q30','Jabra Elite85h','HP Officejet','Galaxy S23',
-  'BT Keyboard','Magic Mouse','Redmi Note12','Garmin Fenix7',
-];
-const FAKE_TV = [
-  {brand:'Samsung',ip:'192.168.1.101',model:'QN65QN900B'},
-  {brand:'LG',    ip:'192.168.1.102',model:'OLED65C2'},
-  {brand:'Sony',  ip:'192.168.1.104',model:'XR-55A80K'},
-  {brand:'Philips',ip:'192.168.1.107',model:'55OLED807'},
-  {brand:'TCL',   ip:'192.168.1.112',model:'55C835'},
-  {brand:'Hisense',ip:'192.168.1.115',model:'65U8H'},
-];
 
 /* ================================================
    STATE
@@ -75,7 +50,6 @@ const MENU = [
   {id:'wifi_scan',   ic:'~', n:'NET INFO',         cat:'SCAN'},
   {id:'bt_scan',     ic:'*', n:'BT SCANNER',      cat:'SCAN'},
   {id:'tv_scan',     ic:'#', n:'TV SCANNER',      cat:'SCAN'},
-  {id:'subghz',      ic:'=', n:'SUB-GHz',         cat:'SCAN'},
   {id:'nfc',         ic:'o', n:'NFC READ/WRITE',  cat:'SCAN'},
   {id:'samsung',     ic:'>', n:'SAMSUNG TV',      cat:'TV'},
   {id:'lg',          ic:'@', n:'LG TV',           cat:'TV'},
@@ -94,11 +68,9 @@ const MENU = [
   {id:'speech',      ic:'>', n:'SPEECH TO TEXT',  cat:'TOOL'},
   {id:'ping',        ic:'o', n:'PING / NET INFO', cat:'TOOL'},
   {id:'gps',         ic:'+', n:'GPS TRACKER',     cat:'GPS'},
-  {id:'fake_hack',   ic:'>', n:'RF SIM [DEMO]',   cat:'SYS'},
   {id:'wakelock',    ic:'o', n:'WAKE LOCK',       cat:'SYS'},
   {id:'system',      ic:'*', n:'SYSTEM',          cat:'SYS'},
-  {id:'custom1',     ic:'1', n:'CUSTOM SCRIPT 1', cat:'CUSTOM'},
-  {id:'custom2',     ic:'2', n:'CUSTOM SCRIPT 2', cat:'CUSTOM'},
+  {id:'custom',      ic:'>', n:'CUSTOM SCRIPT',   cat:'CUSTOM'},
 ];
 
 const CAT_C = {
@@ -358,7 +330,7 @@ async function openApp(id){
   await new Promise(r=>setTimeout(r,80));
   const apps={
     wifi_scan:appWifiScan, bt_scan:appBtScan, tv_scan:appTvScan,
-    subghz:appSubGHz,      nfc:appNFC,
+    nfc:appNFC,
     samsung:appSam,        lg:appLG,     sony:appSony,   ir:appIR,
     bt_connect:appBT,      bt_pair:appBTPair,
     serial_term:appSerialTerm,
@@ -366,9 +338,8 @@ async function openApp(id){
     level:appLevel,        qr:appQR,     cam:appCam,
     morse:appMorse,        speech:appSpeech, ping:appPing,
     gps:appGPS,
-    fake_hack:appHack,     wakelock:appWake,  system:appSystem,
-    custom1:()=>appCustom(1),
-    custom2:()=>appCustom(2),
+    wakelock:appWake,  system:appSystem,
+    custom:appCustom,
   };
   apps[id]?.();
 }
@@ -582,7 +553,7 @@ function appTvScan(){
   const render=()=>{
     const rows=tvs.map(t=>`
       <div class="scan-row">
-        <span style="width:16px;font-size:4.5px;color:${t.real?'var(--fl)':'var(--fgd)'};font-family:var(--mo)">${t.real?'[!]':'[?]'}</span>
+        <span style="width:16px;font-size:4.5px;color:var(--fl);font-family:var(--mo)">[TV]</span>
         <span class="name" style="font-size:5.5px">${t.brand} ${t.model}</span>
         <span class="extra">${t.ip}</span>
       </div>`).join('');
@@ -600,10 +571,6 @@ function appTvScan(){
   btn('SCAN LAN',async()=>{
     if(scanning)return;
     scanning=true;tvs=[];render();T('SCANNING LAN...');startLoad(6000);
-    const pool=shuffle(FAKE_TV);
-    pool.slice(0,rand(1,3)).forEach((tv,i)=>{
-      setTimeout(()=>{tvs.push({...tv,real:false});render();vib(15);lp('O',200)},800+i*600);
-    });
     const localIp=await getLocalIP();
     if(localIp){
       const subnet=localIp.split('.').slice(0,3).join('.');
@@ -643,61 +610,6 @@ function appTvScan(){
   _H={ok:()=>document.querySelector('.cb.cg')?.click()};
 }
 
-/* ================================================
-   4. SUB-GHz
-   NOTE: Browsers have zero access to radio hardware.
-   Real Sub-GHz scanning requires physical RF chips
-   (CC1101 etc). This is a SIMULATION / visualizer.
-   Labeled clearly so there's no confusion.
-================================================ */
-const SUBF=[315.00,433.92,868.35,915.00];
-function appSubGHz(){
-  S._subSigs=S._subSigs||[];S._subOn=false;S._subIdx=S._subIdx||1;
-  rSub();clearCtx();
-  btn('SCAN',subScan,'cg');
-  btn('STOP',subStop,'');
-  btn('REPLAY',()=>{
-    if(!S._subSigs?.length){T('NOTHING TO REPLAY');return}
-    T('REPLAYING...');
-    for(let i=0;i<8;i++)setTimeout(()=>{flashIR();vib(8)},i*100);
-  },'co');
-  btn('< FREQ',()=>{S._subIdx=(S._subIdx-1+SUBF.length)%SUBF.length;rSub()},'');
-  btn('FREQ >',()=>{S._subIdx=(S._subIdx+1)%SUBF.length;rSub()},'');
-  btn('CLEAR',()=>{S._subSigs=[];rSub()},'');
-  _H={lt:()=>{S._subIdx=(S._subIdx-1+SUBF.length)%SUBF.length;rSub()},rt:()=>{S._subIdx=(S._subIdx+1)%SUBF.length;rSub()},ok:subScan};
-}
-function rSub(){
-  const f=SUBF[S._subIdx||1].toFixed(2);
-  const st=S._subOn?'<span class="bl">[SIM ACTIVE]</span>':'[IDLE]';
-  const sigs=(S._subSigs||[]).slice(-6).reverse().map(s=>
-    `<div class="scan-row"><span style="font-size:4.5px;color:var(--fgd);font-family:var(--mo);width:28px">${s.m}</span><span class="name">${s.f}MHz</span><span class="extra">${s.r}dBm</span></div>`
-  ).join('');
-  scr.innerHTML=`<div class="fi">
-    <div class="sl h" style="font-size:9px;text-align:center;letter-spacing:2px">${f}</div>
-    <div class="sl d" style="text-align:center;font-size:4.5px">< 315 / 433 / 868 / 915 ></div>
-    <div class="sl" style="text-align:center;margin:2px 0">${st}</div>
-    <div class="hr"></div>
-    ${sigs||'<div class="sl d">No signals captured</div>'}
-    <div class="hr"></div>
-    <div class="sl d">TOTAL: ${(S._subSigs||[]).length}</div>
-    <div class="hr"></div>
-    <div class="sl r" style="font-size:4px;white-space:normal;line-height:1.5">[SIM] Browsers cannot access RF hardware. Real Sub-GHz requires CC1101 chip + firmware.</div>
-  </div>`;
-}
-function subScan(){
-  if(S._subOn)return;
-  S._subOn=true;S._subSigs=[];rSub();
-  const m=['ASK','FSK','OOK','2-FSK'];
-  S._subInt=setInterval(()=>{
-    if(!S._subOn)return;
-    if(Math.random()>.42){
-      S._subSigs.push({f:SUBF[S._subIdx||1].toFixed(2),r:-(25+rand(0,60)),m:m[rand(0,3)]});
-      vib(5);lp('O',100);
-    }
-    rSub();
-  },750);
-}
-function subStop(){S._subOn=false;if(S._subInt){clearInterval(S._subInt);S._subInt=null}rSub()}
 
 /* ================================================
    5. NFC
@@ -1848,63 +1760,6 @@ function gpsStart(){
   );
 }
 
-/* ================================================
-   23. HACKER MODE
-================================================ */
-function appHack(){
-  const lines=[
-    {t:'p', s:'> RF SIM DEMO — NOT REAL DATA'},
-    {t:'ok',s:'[SIM] CC1101 RF chip online'},
-    {t:'ok',s:'[SIM] NRF52840 BLE active'},
-    {t:'ok',s:'[SIM] ST25R NFC reader OK'},
-    {t:'p', s:'> [SIM] Scanning 2.4GHz band...'},
-    {t:'ok',s:'[SIM] 14 WiFi networks found'},
-    {t:'ok',s:'[SIM] 9 BLE devices in range'},
-    {t:'p', s:'> [SIM] Checking IR field...'},
-    {t:'ok',s:'[SIM] IR carrier 38kHz detected'},
-    {t:'p', s:'> [SIM] Sub-GHz @ 433.92MHz...'},
-    {t:'ok',s:'[SIM] OOK signal: RSSI -42dBm'},
-    {t:'p', s:'> [SIM] NFC scan...'},
-    {t:'ok',s:'[SIM] ISO 14443-A 07h detected'},
-    {t:'p', s:'> [SIM] GPS constellation...'},
-    {t:'ok',s:'[SIM] Fix: 11 sats HDOP 0.9'},
-    {t:'ok',s:'> DEMO COMPLETE — USE REAL APPS'},
-  ];
-  let li=0;
-  scr.innerHTML=`<div style="padding:2px;height:100%;overflow:hidden"><div class="term" id="hackOut"></div></div>`;
-  clearCtx();
-  btn('RUN',()=>{
-    const el=$('hackOut');if(!el)return;
-    el.textContent='';li=0;startLoad(lines.length*110);
-    clearInterval(window._hackInt);
-    window._hackInt=setInterval(()=>{
-      if(li>=lines.length){clearInterval(window._hackInt);return}
-      const l=lines[li++];
-      el.innerHTML+=`<div class="${l.t==='p'?'p':l.t==='ok'?'ok':'er'}">${l.s}</div>`;
-      vib(4);el.parentElement.scrollTop=9999;
-    },110);
-  },'cg');
-  btn('LIVE',()=>{
-    const el=$('hackOut');if(!el)return;
-    clearInterval(window._hackInt);
-    const pool=[
-      ()=>`[SIM] BLE: ${FAKE_BT[rand(0,FAKE_BT.length-1)]} RSSI:-${rand(30,90)}dBm`,
-      ()=>`[SIM] WiFi: ${FAKE_WIFI[rand(0,FAKE_WIFI.length-1)]} CH${rand(1,11)}`,
-      ()=>`[SIM] RF: ${SUBF[rand(0,3)]}MHz OOK RSSI:-${rand(25,75)}dBm`,
-      ()=>`[SIM] NFC: scan... ${Math.random()>.7?'tag found!':'no tag'}`,
-      ()=>`[SIM] IR: ${Math.random()>.5?'carrier detected':'idle'}`,
-    ];
-    window._hackInt=setInterval(()=>{
-      el.innerHTML+=`<div class="ok">${pool[rand(0,pool.length-1)]()}</div>`;
-      if(el.children.length>20)el.children[0].remove();
-      el.parentElement.scrollTop=9999;
-      if(Math.random()>.7)lp('O',80);if(Math.random()>.85)vib(5);
-    },500);
-    T('LIVE FEED ON');
-  },'cp');
-  btn('CLEAR',()=>{const el=$('hackOut');if(el)el.innerHTML='';clearInterval(window._hackInt)},'');
-  _H={ok:()=>document.querySelector('.cb.cg')?.click()};
-}
 
 /* ================================================
    24. WAKE LOCK
@@ -1984,189 +1839,228 @@ function appLog(){
    S, vib(), lp(), addLog(), flashIR(), fetch, etc.
    Code saved to localStorage per slot.
 ================================================ */
-function appCustom(slot){
-  const KEY='fr_custom'+slot;
-  let code=localStorage.getItem(KEY)||defaultCustomScript(slot);
-  let output=[];
+/* ================================================
+   CUSTOM SCRIPT
+   Full-window split view: editor top, output bottom.
+   Uses a textarea overlay for editing in place.
+================================================ */
+const CUSTOM_KEY = 'fr_custom_v2';
+const CUSTOM_DEFAULT = `// Put custom here!
 
-  const renderApp=()=>{
-    const lines=output.slice(-12);
-    scr.innerHTML=`<div class="fi sl2" style="height:100%">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="sl h">CUSTOM SCRIPT ${slot}</span>
-        <span class="sl d" style="font-size:4px">${code.length} chars</span>
-      </div>
-      <div class="hr"></div>
-      <div id="csOut" style="font-family:var(--mo);font-size:5px;line-height:1.6;color:var(--fg);position:relative;z-index:2">
-        ${lines.length?lines.map(l=>`<div style="color:${l.err?'var(--fr)':'var(--fg)'}">${l.txt}</div>`).join(''):'<div style="color:var(--fgd)">> Press RUN to execute</div>'}
-      </div>
-    </div>`;
+// Available APIs:
+//   T('message')          — toast notification
+//   log('text')           — print to output
+//   vib(ms)               — vibrate
+//   irSendKey('POWER')    — IR command
+//   samKey('vUp')         — Samsung TV key
+//   lgSend(LGU.vUp)       — LG TV command
+//   fetch(url)            — HTTP request
+//   S                     — app state object
+//   scr                   — screen element
+
+log('Script ready.');
+T('Custom script loaded');
+`;
+
+function appCustom(){
+  let code = localStorage.getItem(CUSTOM_KEY) || CUSTOM_DEFAULT;
+  let output = [];
+  let view = 'main'; // 'main' | 'editor' | 'output'
+
+  const log = (txt, err=false) => {
+    output.push({txt: String(txt).slice(0, 120), err});
+    if(output.length > 200) output.shift();
+    if(view === 'output') renderOutput();
+    else if(view === 'main') renderMain();
   };
 
-  const log=(txt,err=false)=>{output.push({txt,err});if(output.length>50)output.shift();renderApp()};
-
-  const runScript=()=>{
-    output=[];log('> running script '+slot+'...');
-    // expose helper API to the script
-    const api={
-      T, btn, scr, S, vib, lp, addLog, flashIR,
-      log:(msg)=>log('  '+String(msg).slice(0,60)),
-      fetch, prompt, alert,
-      rand, shuffle,
-      samKey: typeof samKey!=='undefined'?samKey:()=>{},
-      lgSend: typeof lgSend!=='undefined'?lgSend:()=>{},
-      irSend,
+  const runScript = () => {
+    output = [];
+    log('> RUNNING...');
+    const api = {
+      T, log, vib, flashIR, addLog, scr,
+      fetch, prompt, alert, S,
+      irSendKey: typeof irSendKey !== 'undefined' ? irSendKey : ()=>{},
+      samKey:    typeof samKey    !== 'undefined' ? samKey    : ()=>{},
+      lgSend:    typeof lgSend    !== 'undefined' ? lgSend    : ()=>{},
+      LGU:       typeof LGU       !== 'undefined' ? LGU       : {},
     };
     try{
-      const fn=new Function(...Object.keys(api), '"use strict";\n'+code);
-      const result=fn(...Object.values(api));
+      const fn = new Function(...Object.keys(api), '"use strict";\n' + code);
+      const result = fn(...Object.values(api));
       if(result instanceof Promise){
-        result.then(v=>{if(v!==undefined)log('< '+String(v).slice(0,60))}).catch(e=>log('[ERR] '+e.message.slice(0,50),true));
-      }else if(result!==undefined){
-        log('< '+String(result).slice(0,60));
+        result
+          .then(v => { if(v !== undefined) log('< ' + String(v)); })
+          .catch(e => log('[ERR] ' + e.message, true));
+      } else if(result !== undefined){
+        log('< ' + String(result));
       }
-    }catch(e){
-      log('[ERR] '+e.message.slice(0,60),true);
+    } catch(e){
+      log('[ERR] ' + e.message, true);
     }
-    T('SCRIPT '+slot+' RUN');vib([20,10,20]);lp('G',300);
+    vib([20,10,20]); lp('G', 300);
+    if(view === 'output') renderOutput();
+    else if(view === 'main') renderMain();
   };
 
-  const editScript=()=>{
-    const newCode=prompt('Paste your script (JS):\nAvailable: T(), log(), vib(), btn(), scr, S, fetch, irSend, samKey, lgSend',code);
-    if(newCode!==null){
-      code=newCode;
-      localStorage.setItem(KEY,code);
-      T('SCRIPT SAVED!');
-      renderApp();
-    }
+  /* ── MAIN VIEW ─────────────────────────────── */
+  const renderMain = () => {
+    view = 'main';
+    // show last 4 output lines as preview
+    const preview = output.slice(-4).map(l =>
+      `<div style="font-family:var(--mo);font-size:4.5px;line-height:1.55;
+        color:${l.err?'var(--fr)':'var(--fgd)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${l.txt}
+      </div>`).join('') || `<div style="font-family:var(--mo);font-size:4.5px;color:var(--fgd)">No output yet</div>`;
+
+    // show first 6 lines of code as preview
+    const codeLines = code.split('\n').slice(0, 6);
+    const codePreview = codeLines.map(l =>
+      `<div style="font-family:var(--mo);font-size:4.5px;line-height:1.55;color:var(--fg);
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l || ' '}</div>`
+    ).join('');
+
+    scr.innerHTML = `<div style="display:flex;flex-direction:column;height:100%;padding:3px 4px;gap:3px">
+
+      <!-- code preview block -->
+      <div onclick="window._cs_edit()" style="
+        flex:1;background:#030100;border:1px solid #2a1000;border-radius:4px;
+        padding:5px 6px;cursor:pointer;overflow:hidden;position:relative;min-height:0">
+        <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
+          letter-spacing:.06em;margin-bottom:3px">[TAP TO EDIT]</div>
+        ${codePreview}
+        <div style="position:absolute;bottom:0;left:0;right:0;height:16px;
+          background:linear-gradient(transparent,#030100)"></div>
+      </div>
+
+      <!-- output preview block -->
+      <div onclick="window._cs_output()" style="
+        height:52px;background:#020100;border:1px solid #1a0800;border-radius:4px;
+        padding:4px 6px;cursor:pointer;overflow:hidden;position:relative;flex-shrink:0">
+        <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
+          letter-spacing:.06em;margin-bottom:2px">[OUTPUT — TAP TO EXPAND]</div>
+        ${preview}
+      </div>
+
+    </div>`;
+
+    clearCtx();
+    btn('RUN',    runScript,            'cg');
+    btn('EDIT',   ()=>renderEditor(),   'co');
+    btn('OUTPUT', ()=>renderOutput(),   'cy');
+    btn('CLEAR',  ()=>{output=[];renderMain()}, '');
+    _H = { ok: runScript };
+
+    window._cs_edit   = renderEditor;
+    window._cs_output = renderOutput;
   };
 
-  const renameScript=()=>{
-    const name=prompt('Script name (shown in menu):',MENU.find(m=>m.id==='custom'+slot)?.n||'CUSTOM SCRIPT '+slot);
-    if(name){
-      const m=MENU.find(x=>x.id==='custom'+slot);
-      if(m)m.n=name.toUpperCase().slice(0,18);
-      T('RENAMED!');renderApp();
-    }
+  /* ── FULL-SCREEN EDITOR ─────────────────────── */
+  const renderEditor = () => {
+    view = 'editor';
+
+    // Use a real textarea overlaid on the screen element
+    scr.innerHTML = `<div style="display:flex;flex-direction:column;height:100%">
+      <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
+        padding:3px 5px;letter-spacing:.06em;flex-shrink:0">
+        EDITOR — ${code.length} chars — SAVE closes
+      </div>
+      <textarea id="csEditor" spellcheck="false" autocorrect="off" autocapitalize="off"
+        style="
+          flex:1;width:100%;border:none;outline:none;resize:none;
+          background:#010100;color:var(--fl);
+          font-family:var(--mo);font-size:11px;line-height:1.55;
+          padding:4px 6px;tab-size:2;
+          caret-color:#fff;
+          -webkit-text-fill-color:var(--fl);
+        ">${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+    </div>`;
+
+    // Focus textarea after render
+    setTimeout(()=>{
+      const ta = document.getElementById('csEditor');
+      if(ta){
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        // live char count
+        ta.addEventListener('input', ()=>{
+          const info = scr.querySelector('div');
+          if(info) info.textContent = `EDITOR — ${ta.value.length} chars — SAVE closes`;
+        });
+      }
+    }, 60);
+
+    clearCtx();
+    btn('SAVE', ()=>{
+      const ta = document.getElementById('csEditor');
+      if(ta){
+        code = ta.value;
+        localStorage.setItem(CUSTOM_KEY, code);
+        T('SAVED!'); vib([15,5,15]);
+      }
+      renderMain();
+    }, 'cg');
+    btn('RUN', ()=>{
+      const ta = document.getElementById('csEditor');
+      if(ta){ code = ta.value; localStorage.setItem(CUSTOM_KEY, code); }
+      renderOutput();
+      setTimeout(runScript, 60);
+    }, 'co');
+    btn('RESET', ()=>{
+      if(confirm('Reset to default?')){
+        code = CUSTOM_DEFAULT;
+        localStorage.setItem(CUSTOM_KEY, code);
+        T('RESET'); renderEditor();
+      }
+    }, 'cr');
+    btn('BACK', renderMain, '');
+    _H = { ok: ()=>{
+      const ta = document.getElementById('csEditor');
+      if(ta){ code = ta.value; localStorage.setItem(CUSTOM_KEY, code); T('SAVED!'); }
+      renderMain();
+    }};
   };
 
-  renderApp();clearCtx();
-  btn('RUN',runScript,'cg');
-  btn('EDIT',editScript,'co');
-  btn('RENAME',renameScript,'cy');
-  btn('CLEAR OUT',()=>{output=[];renderApp()},'');
-  btn('RESET',()=>{code=defaultCustomScript(slot);localStorage.setItem(KEY,code);T('RESET TO DEFAULT');renderApp()},'cr');
-  _H={ok:runScript};
+  /* ── FULL-SCREEN OUTPUT ─────────────────────── */
+  const renderOutput = () => {
+    view = 'output';
+
+    const rows = output.length
+      ? output.map(l =>
+          `<div style="
+            font-family:var(--mo);font-size:10px;line-height:1.55;
+            color:${l.err ? 'var(--fr)' : l.txt.startsWith('>') ? '#FF9500' : 'var(--fl)'};
+            border-bottom:1px solid rgba(255,107,0,.05);padding:1px 2px;
+            word-break:break-all;white-space:pre-wrap">${l.txt}</div>`
+        ).join('')
+      : `<div style="font-family:var(--mo);font-size:10px;color:var(--fgd);padding:4px">
+           > Press RUN to execute script
+         </div>`;
+
+    scr.innerHTML = `<div style="
+      height:100%;overflow-y:auto;padding:4px 5px;background:#010100;
+      scrollbar-width:none" id="csOutScroll">
+      ${rows}
+    </div>`;
+
+    // scroll to bottom
+    setTimeout(()=>{
+      const el = document.getElementById('csOutScroll');
+      if(el) el.scrollTop = el.scrollHeight;
+    }, 30);
+
+    clearCtx();
+    btn('RUN',  ()=>{ renderOutput(); setTimeout(runScript,60) }, 'cg');
+    btn('EDIT', renderEditor, 'co');
+    btn('CLEAR',()=>{ output=[]; renderOutput() }, '');
+    btn('BACK', renderMain, '');
+    _H = { ok: ()=>{ renderOutput(); setTimeout(runScript,60) } };
+  };
+
+  renderMain();
 }
 
-function appIPGrabber() {
-  scr.innerHTML = `
-    <div class="fi">
-      <div class="sl h">🎣 IP GRABBER</div>
-      <div class="hr"></div>
-      <div class="sl d">1. GENERATE LINK</div>
-      <div class="sl d">2. SEND TO TARGET</div>
-      <div class="sl d">3. TARGET CLICKS LINK</div>
-      <div class="sl d">4. YOU SEE THEIR IP</div>
-    </div>
-  `;
-  clearCtx();
-
-  btn('GENERATE LINK', () => {
-    const grabUrl = `https://ipinfo.io/json`; // Free public API
-    const encoded = encodeURIComponent(grabUrl);
-    const link = `${location.origin}?grab=${encoded}`;
-    
-    navigator.clipboard.writeText(link).then(() => {
-      T('LINK COPIED TO CLIPBOARD!');
-      showModal(`<div class="sl h">🎣 IP GRABBER</div><div class="sl d">Copy this link and send it to your target:</div><div style="background:#111;padding:8px;margin:8px 0;border-radius:4px;word-break:break-all;font-size:5px">${link}</div><button class="cb cg" onclick="closeModal()">CLOSE</button>`);
-    });
-  }, 'cg');
-}
-
-// This function runs automatically when the page loads
-if(window.location.search.includes('grab')) {
-  fetch('https://ipinfo.io/json')
-    .then(res => res.json())
-    .then(data => {
-      showModal(`
-        <div class="sl h">🎣 TARGET IP GRABBED</div>
-        <div class="sl h">IP: ${data.ip}</div>
-        <div class="sl d">CITY: ${data.city}</div>
-        <div class="sl d">REGION: ${data.region}</div>
-        <div class="sl d">COUNTRY: ${data.country}</div>
-        <div class="sl d">ISP: ${data.org}</div>
-        <button class="cb cg" onclick="closeModal()">CLOSE</button>
-      `);
-    });
-}
-  return function appBTSpammer() {
-  let spamming = false;
-  let timer = null;
-
-  scr.innerHTML = `
-    <div class="fi">
-      <div class="sl h">📡 BT SPAMMER</div>
-      <div class="hr"></div>
-      <div class="sl d">1. CLICK SCAN</div>
-      <div class="sl d">2. SELECT DEVICE</div>
-      <div class="sl d">3. CLICK SPAM</div>
-    </div>
-  `;
-  clearCtx();
-
-  btn('SCAN', async () => {
-    if (!navigator.bluetooth) {
-      T('Bluetooth not supported');
-      return;
-    }
-    try {
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['device_information']
-      });
-      T('DEVICE SELECTED');
-      
-      // Store devices in global S object so we can spam them
-      if (!S.spamDevices) S.spamDevices = [];
-      S.spamDevices.push(device);
-      
-      // Show spam button to the user
-      const spamBtn = document.createElement('button');
-      spamBtn.className = 'cb cr';
-      spamBtn.style.margin = '4px auto';
-      spamBtn.style.display = 'block';
-      spamBtn.textContent = '⚡ START SPAMMING';
-      spamBtn.onclick = () => toggleSpam(device);
-      document.querySelector('.fi').appendChild(spamBtn);
-      
-    } catch (error) {
-      T('SCAN FAILED');
-    }
-  }, 'cg');
-
-  async function toggleSpam(device) {
-    if (spamming) {
-      clearInterval(timer);
-      spamming = false;
-      T('SPAM STOPPED');
-    } else {
-      spamming = true;
-      T('⚡ SPAMMING CONNECTION REQUESTS...');
-      
-      timer = setInterval(async () => {
-        try {
-          // Force a connection request
-          await device.gatt.connect();
-          device.gatt.disconnect();
-          vib([20, 10, 20]); // Vibrate on success
-        } catch (e) {
-          // Ignore connection errors (that's the spam)
-        }
-      }, 1000); // Spam every 1 second
-    }
-  }
-}
+function defaultCustomScript(){ return CUSTOM_DEFAULT; }
 
 /* ================================================
    PWA
