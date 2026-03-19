@@ -1833,141 +1833,139 @@ function appLog(){
   _H={up:()=>{off=Math.max(0,off-1);r()},dn:()=>{off=Math.min(Math.max(0,S.log.length-8),off+1);r()}};
 }
 
-// BLE STRESS TESTER (Custom Script Version)
+/* ================================================
+   26. BLE TESTER
+================================================ */
+function appBLETester(){
+  let device = null;
+  let server = null;
+  let running = false;
 
-let device = null;
-let server = null;
-let running = false;
+  let stats = {
+    attempts: 0,
+    success: 0,
+    fail: 0,
+    lastLatency: 0
+  };
 
-let stats = {
-  attempts: 0,
-  success: 0,
-  fail: 0,
-  lastLatency: 0
-};
+  const render = () => {
+    scr.innerHTML = `
+    <div class="fi">
+      <div class="sl h">BLE TESTER</div>
+      <div class="hr"></div>
+      <div class="sl d">${running ? '[RUNNING]' : '[IDLE]'}</div>
+      <div class="sl d">A:${stats.attempts} OK:${stats.success} F:${stats.fail}</div>
+      ${stats.lastLatency ? `<div class="sl h">${stats.lastLatency}ms</div>` : ''}
+    </div>`;
+  };
 
-// UI
-scr.innerHTML = `
-<div class="fi">
-  <div class="sl h">📡 BLE TESTER</div>
-  <div class="hr"></div>
-  <div class="sl d" id="st">IDLE</div>
-  <div class="sl d" id="ss">A:0 OK:0 F:0</div>
-</div>
-`;
+  const setStatus = (t) => {
+    log(t);
+    T(t);
+  };
 
-function updateUI() {
-  const st = document.getElementById('st');
-  const ss = document.getElementById('ss');
-  if (st) st.textContent = running ? 'RUNNING' : 'IDLE';
-  if (ss) ss.textContent =
-    `A:${stats.attempts} OK:${stats.success} F:${stats.fail}`;
-}
+  render();
+  clearCtx();
 
-function setStatus(t) {
-  log(t);
-  T(t);
-}
+  // SCAN
+  btn('SCAN', async () => {
+    if (!navigator.bluetooth) {
+      setStatus('NO BT');
+      return;
+    }
 
-// SCAN
-btn('SCAN', async () => {
-  if (!navigator.bluetooth) {
-    setStatus('NO BT');
-    return;
-  }
+    try {
+      device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['device_information']
+      });
 
-  try {
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['device_information', 'battery_service']
-    });
+      setStatus('DEVICE SET');
+      vib([20,10,20]);
+    } catch {
+      setStatus('SCAN FAIL');
+    }
+  }, 'cg');
 
-    setStatus('DEVICE SET');
-    vib([20,10,20]);
-  } catch {
-    setStatus('SCAN FAIL');
-  }
-}, 'cg');
-
-// SINGLE TEST
-btn('TEST', async () => {
-  if (!device) return setStatus('NO DEVICE');
-
-  const start = performance.now();
-  stats.attempts++;
-
-  try {
-    server = await device.gatt.connect();
-    stats.success++;
-    stats.lastLatency = Math.round(performance.now() - start);
-
-    log('OK ' + stats.lastLatency + 'ms');
-    server.disconnect();
-  } catch {
-    stats.fail++;
-    log('FAIL', true);
-  }
-
-  updateUI();
-}, 'cy');
-
-// STRESS LOOP
-btn('⚡ STRESS', () => {
-  if (!device) return setStatus('NO DEVICE');
-  if (running) return;
-
-  running = true;
-  setStatus('START');
-
-  const loop = async () => {
-    if (!running) return;
+  // SINGLE TEST
+  btn('TEST', async () => {
+    if (!device) return setStatus('NO DEVICE');
 
     stats.attempts++;
-    const start = performance.now();
+    const t0 = performance.now();
 
     try {
       server = await device.gatt.connect();
-
-      // REAL load: service access
-      try {
-        const s = await server.getPrimaryService('device_information');
-        await s.getCharacteristics();
-      } catch {}
-
       stats.success++;
-      stats.lastLatency = Math.round(performance.now() - start);
+      stats.lastLatency = Math.round(performance.now() - t0);
 
       server.disconnect();
+      setStatus('OK ' + stats.lastLatency + 'ms');
     } catch {
       stats.fail++;
+      setStatus('FAIL');
     }
 
-    updateUI();
+    render();
+  }, 'cy');
 
-    // adaptive delay
-    const delay = stats.fail > stats.success ? 1200 : 500;
-    setTimeout(loop, delay);
+  // STRESS
+  btn('STRESS', () => {
+    if (!device) return setStatus('NO DEVICE');
+    if (running) return;
+
+    running = true;
+    setStatus('START');
+
+    const loop = async () => {
+      if (!running) return;
+
+      stats.attempts++;
+      const t0 = performance.now();
+
+      try {
+        server = await device.gatt.connect();
+
+        try {
+          const s = await server.getPrimaryService('device_information');
+          await s.getCharacteristics();
+        } catch {}
+
+        stats.success++;
+        stats.lastLatency = Math.round(performance.now() - t0);
+
+        server.disconnect();
+      } catch {
+        stats.fail++;
+      }
+
+      render();
+
+      const delay = stats.fail > stats.success ? 1200 : 500;
+      setTimeout(loop, delay);
+    };
+
+    loop();
+  }, 'cr');
+
+  // STOP
+  btn('STOP', () => {
+    running = false;
+    setStatus('STOP');
+    render();
+  }, 'cb');
+
+  // RESET
+  btn('RESET', () => {
+    stats = { attempts:0, success:0, fail:0, lastLatency:0 };
+    render();
+    setStatus('RESET');
+  }, '');
+
+  _H = {
+    ok: () => document.querySelector('.cb.cg')?.click()
   };
-
-  loop();
-}, 'cr');
-
-// STOP
-btn('STOP', () => {
-  running = false;
-  setStatus('STOP');
-}, 'cb');
-
-// RESET
-btn('RESET', () => {
-  stats = { attempts:0, success:0, fail:0, lastLatency:0 };
-  updateUI();
-  setStatus('RESET');
-}, '');
-
-updateUI();
-log('BLE tester ready');
-T('READY');
+}
 
 /* ================================================
    PWA
