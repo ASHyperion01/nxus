@@ -1833,234 +1833,141 @@ function appLog(){
   _H={up:()=>{off=Math.max(0,off-1);r()},dn:()=>{off=Math.min(Math.max(0,S.log.length-8),off+1);r()}};
 }
 
-/* ================================================
-   26 & 27. CUSTOM SCRIPT 1 & 2
-   Write any JS. Has access to: T(), btn(), scr,
-   S, vib(), lp(), addLog(), flashIR(), fetch, etc.
-   Code saved to localStorage per slot.
-================================================ */
-/* ================================================
-   CUSTOM SCRIPT
-   Full-window split view: editor top, output bottom.
-   Uses a textarea overlay for editing in place.
-================================================ */
-const CUSTOM_KEY = 'fr_custom_v2';
-const CUSTOM_DEFAULT = `// Put custom here!
+// BLE STRESS TESTER (Custom Script Version)
 
-// Available APIs:
-//   T('message')          — toast notification
-//   log('text')           — print to output
-//   vib(ms)               — vibrate
-//   irSendKey('POWER')    — IR command
-//   samKey('vUp')         — Samsung TV key
-//   lgSend(LGU.vUp)       — LG TV command
-//   fetch(url)            — HTTP request
-//   S                     — app state object
-//   scr                   — screen element
+let device = null;
+let server = null;
+let running = false;
 
-log('Script ready.');
-T('Custom script loaded');
+let stats = {
+  attempts: 0,
+  success: 0,
+  fail: 0,
+  lastLatency: 0
+};
+
+// UI
+scr.innerHTML = `
+<div class="fi">
+  <div class="sl h">📡 BLE TESTER</div>
+  <div class="hr"></div>
+  <div class="sl d" id="st">IDLE</div>
+  <div class="sl d" id="ss">A:0 OK:0 F:0</div>
+</div>
 `;
 
-function appCustom(){
-  let code = localStorage.getItem(CUSTOM_KEY) || CUSTOM_DEFAULT;
-  let output = [];
-  let view = 'main'; // 'main' | 'editor' | 'output'
-
-  const log = (txt, err=false) => {
-    output.push({txt: String(txt).slice(0, 120), err});
-    if(output.length > 200) output.shift();
-    if(view === 'output') renderOutput();
-    else if(view === 'main') renderMain();
-  };
-
-  const runScript = () => {
-    output = [];
-    log('> RUNNING...');
-    const api = {
-      T, log, vib, flashIR, addLog, scr,
-      fetch, prompt, alert, S,
-      irSendKey: typeof irSendKey !== 'undefined' ? irSendKey : ()=>{},
-      samKey:    typeof samKey    !== 'undefined' ? samKey    : ()=>{},
-      lgSend:    typeof lgSend    !== 'undefined' ? lgSend    : ()=>{},
-      LGU:       typeof LGU       !== 'undefined' ? LGU       : {},
-    };
-    try{
-      const fn = new Function(...Object.keys(api), '"use strict";\n' + code);
-      const result = fn(...Object.values(api));
-      if(result instanceof Promise){
-        result
-          .then(v => { if(v !== undefined) log('< ' + String(v)); })
-          .catch(e => log('[ERR] ' + e.message, true));
-      } else if(result !== undefined){
-        log('< ' + String(result));
-      }
-    } catch(e){
-      log('[ERR] ' + e.message, true);
-    }
-    vib([20,10,20]); lp('G', 300);
-    if(view === 'output') renderOutput();
-    else if(view === 'main') renderMain();
-  };
-
-  /* ── MAIN VIEW ─────────────────────────────── */
-  const renderMain = () => {
-    view = 'main';
-    // show last 4 output lines as preview
-    const preview = output.slice(-4).map(l =>
-      `<div style="font-family:var(--mo);font-size:4.5px;line-height:1.55;
-        color:${l.err?'var(--fr)':'var(--fgd)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        ${l.txt}
-      </div>`).join('') || `<div style="font-family:var(--mo);font-size:4.5px;color:var(--fgd)">No output yet</div>`;
-
-    // show first 6 lines of code as preview
-    const codeLines = code.split('\n').slice(0, 6);
-    const codePreview = codeLines.map(l =>
-      `<div style="font-family:var(--mo);font-size:4.5px;line-height:1.55;color:var(--fg);
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l || ' '}</div>`
-    ).join('');
-
-    scr.innerHTML = `<div style="display:flex;flex-direction:column;height:100%;padding:3px 4px;gap:3px">
-
-      <!-- code preview block -->
-      <div onclick="window._cs_edit()" style="
-        flex:1;background:#030100;border:1px solid #2a1000;border-radius:4px;
-        padding:5px 6px;cursor:pointer;overflow:hidden;position:relative;min-height:0">
-        <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
-          letter-spacing:.06em;margin-bottom:3px">[TAP TO EDIT]</div>
-        ${codePreview}
-        <div style="position:absolute;bottom:0;left:0;right:0;height:16px;
-          background:linear-gradient(transparent,#030100)"></div>
-      </div>
-
-      <!-- output preview block -->
-      <div onclick="window._cs_output()" style="
-        height:52px;background:#020100;border:1px solid #1a0800;border-radius:4px;
-        padding:4px 6px;cursor:pointer;overflow:hidden;position:relative;flex-shrink:0">
-        <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
-          letter-spacing:.06em;margin-bottom:2px">[OUTPUT — TAP TO EXPAND]</div>
-        ${preview}
-      </div>
-
-    </div>`;
-
-    clearCtx();
-    btn('RUN',    runScript,            'cg');
-    btn('EDIT',   ()=>renderEditor(),   'co');
-    btn('OUTPUT', ()=>renderOutput(),   'cy');
-    btn('CLEAR',  ()=>{output=[];renderMain()}, '');
-    _H = { ok: runScript };
-
-    window._cs_edit   = renderEditor;
-    window._cs_output = renderOutput;
-  };
-
-  /* ── FULL-SCREEN EDITOR ─────────────────────── */
-  const renderEditor = () => {
-    view = 'editor';
-
-    // Use a real textarea overlaid on the screen element
-    scr.innerHTML = `<div style="display:flex;flex-direction:column;height:100%">
-      <div style="font-family:var(--px);font-size:4px;color:var(--fgd);
-        padding:3px 5px;letter-spacing:.06em;flex-shrink:0">
-        EDITOR — ${code.length} chars — SAVE closes
-      </div>
-      <textarea id="csEditor" spellcheck="false" autocorrect="off" autocapitalize="off"
-        style="
-          flex:1;width:100%;border:none;outline:none;resize:none;
-          background:#010100;color:var(--fl);
-          font-family:var(--mo);font-size:11px;line-height:1.55;
-          padding:4px 6px;tab-size:2;
-          caret-color:#fff;
-          -webkit-text-fill-color:var(--fl);
-        ">${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
-    </div>`;
-
-    // Focus textarea after render
-    setTimeout(()=>{
-      const ta = document.getElementById('csEditor');
-      if(ta){
-        ta.focus();
-        ta.setSelectionRange(ta.value.length, ta.value.length);
-        // live char count
-        ta.addEventListener('input', ()=>{
-          const info = scr.querySelector('div');
-          if(info) info.textContent = `EDITOR — ${ta.value.length} chars — SAVE closes`;
-        });
-      }
-    }, 60);
-
-    clearCtx();
-    btn('SAVE', ()=>{
-      const ta = document.getElementById('csEditor');
-      if(ta){
-        code = ta.value;
-        localStorage.setItem(CUSTOM_KEY, code);
-        T('SAVED!'); vib([15,5,15]);
-      }
-      renderMain();
-    }, 'cg');
-    btn('RUN', ()=>{
-      const ta = document.getElementById('csEditor');
-      if(ta){ code = ta.value; localStorage.setItem(CUSTOM_KEY, code); }
-      renderOutput();
-      setTimeout(runScript, 60);
-    }, 'co');
-    btn('RESET', ()=>{
-      if(confirm('Reset to default?')){
-        code = CUSTOM_DEFAULT;
-        localStorage.setItem(CUSTOM_KEY, code);
-        T('RESET'); renderEditor();
-      }
-    }, 'cr');
-    btn('BACK', renderMain, '');
-    _H = { ok: ()=>{
-      const ta = document.getElementById('csEditor');
-      if(ta){ code = ta.value; localStorage.setItem(CUSTOM_KEY, code); T('SAVED!'); }
-      renderMain();
-    }};
-  };
-
-  /* ── FULL-SCREEN OUTPUT ─────────────────────── */
-  const renderOutput = () => {
-    view = 'output';
-
-    const rows = output.length
-      ? output.map(l =>
-          `<div style="
-            font-family:var(--mo);font-size:10px;line-height:1.55;
-            color:${l.err ? 'var(--fr)' : l.txt.startsWith('>') ? '#FF9500' : 'var(--fl)'};
-            border-bottom:1px solid rgba(255,107,0,.05);padding:1px 2px;
-            word-break:break-all;white-space:pre-wrap">${l.txt}</div>`
-        ).join('')
-      : `<div style="font-family:var(--mo);font-size:10px;color:var(--fgd);padding:4px">
-           > Press RUN to execute script
-         </div>`;
-
-    scr.innerHTML = `<div style="
-      height:100%;overflow-y:auto;padding:4px 5px;background:#010100;
-      scrollbar-width:none" id="csOutScroll">
-      ${rows}
-    </div>`;
-
-    // scroll to bottom
-    setTimeout(()=>{
-      const el = document.getElementById('csOutScroll');
-      if(el) el.scrollTop = el.scrollHeight;
-    }, 30);
-
-    clearCtx();
-    btn('RUN',  ()=>{ renderOutput(); setTimeout(runScript,60) }, 'cg');
-    btn('EDIT', renderEditor, 'co');
-    btn('CLEAR',()=>{ output=[]; renderOutput() }, '');
-    btn('BACK', renderMain, '');
-    _H = { ok: ()=>{ renderOutput(); setTimeout(runScript,60) } };
-  };
-
-  renderMain();
+function updateUI() {
+  const st = document.getElementById('st');
+  const ss = document.getElementById('ss');
+  if (st) st.textContent = running ? 'RUNNING' : 'IDLE';
+  if (ss) ss.textContent =
+    `A:${stats.attempts} OK:${stats.success} F:${stats.fail}`;
 }
 
-function defaultCustomScript(){ return CUSTOM_DEFAULT; }
+function setStatus(t) {
+  log(t);
+  T(t);
+}
+
+// SCAN
+btn('SCAN', async () => {
+  if (!navigator.bluetooth) {
+    setStatus('NO BT');
+    return;
+  }
+
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ['device_information', 'battery_service']
+    });
+
+    setStatus('DEVICE SET');
+    vib([20,10,20]);
+  } catch {
+    setStatus('SCAN FAIL');
+  }
+}, 'cg');
+
+// SINGLE TEST
+btn('TEST', async () => {
+  if (!device) return setStatus('NO DEVICE');
+
+  const start = performance.now();
+  stats.attempts++;
+
+  try {
+    server = await device.gatt.connect();
+    stats.success++;
+    stats.lastLatency = Math.round(performance.now() - start);
+
+    log('OK ' + stats.lastLatency + 'ms');
+    server.disconnect();
+  } catch {
+    stats.fail++;
+    log('FAIL', true);
+  }
+
+  updateUI();
+}, 'cy');
+
+// STRESS LOOP
+btn('⚡ STRESS', () => {
+  if (!device) return setStatus('NO DEVICE');
+  if (running) return;
+
+  running = true;
+  setStatus('START');
+
+  const loop = async () => {
+    if (!running) return;
+
+    stats.attempts++;
+    const start = performance.now();
+
+    try {
+      server = await device.gatt.connect();
+
+      // REAL load: service access
+      try {
+        const s = await server.getPrimaryService('device_information');
+        await s.getCharacteristics();
+      } catch {}
+
+      stats.success++;
+      stats.lastLatency = Math.round(performance.now() - start);
+
+      server.disconnect();
+    } catch {
+      stats.fail++;
+    }
+
+    updateUI();
+
+    // adaptive delay
+    const delay = stats.fail > stats.success ? 1200 : 500;
+    setTimeout(loop, delay);
+  };
+
+  loop();
+}, 'cr');
+
+// STOP
+btn('STOP', () => {
+  running = false;
+  setStatus('STOP');
+}, 'cb');
+
+// RESET
+btn('RESET', () => {
+  stats = { attempts:0, success:0, fail:0, lastLatency:0 };
+  updateUI();
+  setStatus('RESET');
+}, '');
+
+updateUI();
+log('BLE tester ready');
+T('READY');
 
 /* ================================================
    PWA
