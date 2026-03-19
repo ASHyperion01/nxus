@@ -72,7 +72,7 @@ const S = {
    MENU
 ================================================ */
 const MENU = [
-  {id:'wifi_scan',   ic:'~', n:'WIFI SCANNER',    cat:'SCAN'},
+  {id:'wifi_scan',   ic:'~', n:'NET INFO',         cat:'SCAN'},
   {id:'bt_scan',     ic:'*', n:'BT SCANNER',      cat:'SCAN'},
   {id:'tv_scan',     ic:'#', n:'TV SCANNER',      cat:'SCAN'},
   {id:'subghz',      ic:'=', n:'SUB-GHz',         cat:'SCAN'},
@@ -94,7 +94,7 @@ const MENU = [
   {id:'speech',      ic:'>', n:'SPEECH TO TEXT',  cat:'TOOL'},
   {id:'ping',        ic:'o', n:'PING / NET INFO', cat:'TOOL'},
   {id:'gps',         ic:'+', n:'GPS TRACKER',     cat:'GPS'},
-  {id:'fake_hack',   ic:'>', n:'HACKER MODE',     cat:'SYS'},
+  {id:'fake_hack',   ic:'>', n:'RF SIM [DEMO]',   cat:'SYS'},
   {id:'wakelock',    ic:'o', n:'WAKE LOCK',       cat:'SYS'},
   {id:'system',      ic:'*', n:'SYSTEM',          cat:'SYS'},
   {id:'custom1',     ic:'1', n:'CUSTOM SCRIPT 1', cat:'CUSTOM'},
@@ -418,143 +418,157 @@ async function getLocalIP(){
 }
 
 /* ================================================
-   1. WIFI SCANNER
+   1. WIFI / NETWORK INFO
+   Browsers block WiFi scanning at the OS level —
+   no API exists to enumerate nearby networks.
+   We show everything the browser DOES expose:
+   connection type, speed, RTT, local IP.
 ================================================ */
 function appWifiScan(){
-  let networks=[];let scanning=false;let interval=null;
-  const fakePool=shuffle(FAKE_WIFI);let fakeIdx=0;
-
-  const addNet=(ssid,rssi,secure)=>{
-    const existing=networks.findIndex(n=>n.ssid===ssid);
-    const entry={ssid,rssi,secure,ts:Date.now()};
-    if(existing>=0)networks[existing]={...entry};
-    else networks.unshift(entry);
-    if(networks.length>24)networks.pop();
-  };
+  let localIp='detecting...';let fetching=false;
 
   const render=()=>{
-    const sorted=[...networks].sort((a,b)=>b.rssi-a.rssi);
-    const rows=sorted.slice(0,10).map(n=>{
-      const pct=Math.max(0,Math.min(1,(n.rssi+100)/65));
-      const lock=n.secure?'[+]':'[ ]';
-      const fresh=Date.now()-n.ts<2000;
-      return `<div class="scan-row${fresh?' new-dev':''}">
-        <span style="width:20px;font-size:4.5px;color:var(--fgd);font-family:var(--mo)">${lock}</span>
-        ${rssiBar(pct)}
-        <span class="name" style="font-size:5.5px">${n.ssid}</span>
-        <span class="extra">${n.rssi}dBm</span>
-      </div>`;
-    }).join('');
-    scr.innerHTML=`<div class="fi" style="height:100%">
+    const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    const online=navigator.onLine;
+    const rows=[
+      {k:'STATUS',    v:online?'[ONLINE]':'[OFFLINE]', hi:online},
+      {k:'TYPE',      v:c?.type||'unknown'},
+      {k:'EFF TYPE',  v:c?.effectiveType||'unknown'},
+      {k:'DOWNLINK',  v:c?.downlink!=null?c.downlink+' Mbps':'unknown'},
+      {k:'UPLINK',    v:c?.uplinkMax!=null?c.uplinkMax+' Mbps':'unknown'},
+      {k:'RTT',       v:c?.rtt!=null?c.rtt+'ms':'unknown'},
+      {k:'SAVE DATA', v:c?.saveData?'YES':'NO'},
+      {k:'LOCAL IP',  v:localIp},
+    ].map(r=>`<div style="display:flex;gap:4px;font-family:var(--mo);font-size:5px;line-height:1.7;position:relative;z-index:2;border-bottom:1px solid rgba(255,107,0,.06);padding:1px 2px">
+      <span style="width:52px;color:var(--fgd);flex-shrink:0">${r.k}</span>
+      <span style="color:${r.hi?'var(--fl)':'#fff'}">${r.v}</span>
+    </div>`).join('');
+
+    scr.innerHTML=`<div class="fi sl2" style="height:100%">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="sl h">WIFI SCAN</span>
-        <span class="sl d" style="font-size:4.5px">${scanning?'<span class="bl">[LIVE]</span>':'[IDLE]'} ${networks.length}net</span>
+        <span class="sl h">WIFI / NET INFO</span>
+        <span class="sl d" style="font-size:4px">[LIVE DATA]</span>
       </div>
       <div class="hr"></div>
-      <div style="font-family:var(--mo);font-size:4.5px;color:var(--fgd);display:flex;gap:8px;margin-bottom:2px">
-        <span>LOCK  SIG  SSID</span><span style="margin-left:auto">RSSI</span>
+      ${rows}
+      <div class="hr"></div>
+      <div class="sl d" style="font-size:4px;white-space:normal;line-height:1.5">
+        [!] Browsers block WiFi network enumeration at OS level. No API exists to list nearby SSIDs in any browser.
       </div>
-      ${rows||'<div class="sl d" style="margin-top:6px">> Press SCAN to start</div>'}
     </div>`;
   };
-  render();clearCtx();
 
-  btn('SCAN',()=>{
-    if(scanning)return;
-    scanning=true;render();
-    const c=navigator.connection;
-    if(c?.type==='wifi')addNet('(current)',rand(-65,-35),true);
-    const addFake=()=>{
-      addNet(fakePool[fakeIdx%fakePool.length],rand(-95,-28),Math.random()>.2);
-      fakeIdx++;lp('G',80);render();
-    };
-    for(let i=0;i<6;i++)setTimeout(addFake,i*120);
-    interval=setInterval(()=>{
-      if(!scanning){clearInterval(interval);return}
-      networks.forEach(n=>{n.rssi=Math.max(-100,Math.min(-20,n.rssi+rand(-3,3)))});
-      if(Math.random()>.6)addFake();
-      render();
-    },900);
-    S._wifiInt=interval;
-    T('SCANNING 2.4/5GHz...');
-  },'cg');
-  btn('STOP',()=>{scanning=false;clearInterval(interval);render();T('STOPPED')},'');
-  btn('SORT',()=>{networks.sort((a,b)=>b.rssi-a.rssi);render()},'cy');
-  btn('CLEAR',()=>{networks=[];render()},'');
-  btn('EXPORT',()=>{
-    const txt=networks.map(n=>`${n.ssid}\t${n.rssi}dBm\t${n.secure?'WPA':'OPEN'}`).join('\n');
+  const fetchIp=async()=>{
+    if(fetching)return;fetching=true;
+    localIp='detecting...';render();
+    const ip=await getLocalIP();
+    localIp=ip||'unavailable';
+    fetching=false;render();
+  };
+
+  render();fetchIp();clearCtx();
+
+  btn('REFRESH',()=>{render();T('REFRESHED')},'cg');
+  btn('GET IP',fetchIp,'co');
+  btn('COPY',()=>{
+    const c=navigator.connection||{};
+    const txt=`Status: ${navigator.onLine?'online':'offline'}\nType: ${c.type||'?'}\nEffective: ${c.effectiveType||'?'}\nDownlink: ${c.downlink||'?'} Mbps\nRTT: ${c.rtt||'?'}ms\nLocal IP: ${localIp}`;
     navigator.clipboard?.writeText(txt).then(()=>T('COPIED!'));
-  },'co');
-  _H={ok:()=>document.querySelector('.cb.cg')?.click()};
+  },'cy');
+
+  // auto-refresh on connection change
+  if(navigator.connection){
+    navigator.connection.onchange=()=>render();
+  }
+  window.addEventListener('online',render,{once:false});
+  window.addEventListener('offline',render,{once:false});
+
+  _H={ok:()=>{render();fetchIp()}};
 }
 
 /* ================================================
-   2. BT SCANNER
+   2. BT SCANNER  —  real Web Bluetooth
+   Each SCAN call opens the browser BT picker.
+   Devices accumulate in the list with real RSSI
+   where available, or estimated from discovery.
 ================================================ */
 function appBtScan(){
-  let devs=[];let scanning=false;let interval=null;
-  const fakePool=shuffle(FAKE_BT);let fakeIdx=0;
-
-  const addDev=(name,rssi,type)=>{
-    const existing=devs.findIndex(d=>d.name===name);
-    const entry={name,rssi,type,ts:Date.now(),
-      addr:Array.from({length:6},()=>rand(0,255).toString(16).padStart(2,'0').toUpperCase()).join(':')};
-    if(existing>=0)devs[existing]={...entry};
-    else devs.unshift(entry);
-    if(devs.length>20)devs.pop();
-  };
+  let devs=[];
 
   const render=()=>{
-    const rows=devs.slice(0,9).map(d=>{
-      const pct=Math.max(0,(d.rssi+100)/70);
-      const fresh=Date.now()-d.ts<2000;
-      return `<div class="scan-row${fresh?' new-dev':''}">
+    const rows=devs.map((d,i)=>`
+      <div class="scan-row">
         <span style="width:14px;font-size:4.5px;color:var(--fg);font-family:var(--mo)">[B]</span>
-        ${rssiBar(pct)}
         <span class="name" style="font-size:5.5px">${d.name}</span>
-        <span class="extra">${d.rssi}dBm</span>
-      </div>`;
-    }).join('');
-    scr.innerHTML=`<div class="fi" style="height:100%">
+        <span class="extra" style="font-size:4px">${d.id.slice(0,8)}</span>
+      </div>`).join('');
+    scr.innerHTML=`<div class="fi sl2" style="height:100%">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="sl h">BT SCAN</span>
-        <span class="sl d" style="font-size:4.5px">${scanning?'<span class="bl">[BLE]</span>':'[IDLE]'} ${devs.length}dev</span>
+        <span class="sl h">BT SCANNER</span>
+        <span class="sl d" style="font-size:4.5px">[REAL] ${devs.length}dev</span>
       </div>
+      <div class="sl d" style="font-size:4px;margin-bottom:2px">Web BT — browser shows picker, tap device to add</div>
       <div class="hr"></div>
-      ${rows||'<div class="sl d" style="margin-top:6px">> Press SCAN</div>'}
+      ${rows||'<div class="sl d">> Press SCAN — real BT picker opens</div>'}
+      ${devs.length?`<div class="hr"></div><div class="sl d" style="font-size:4px">[*] = connected via GATT</div>`:''}
     </div>`;
   };
+
   render();clearCtx();
 
   btn('SCAN',async()=>{
-    if(scanning)return;
-    scanning=true;render();
-    const TYPES=['Phone','Headphones','Watch','Speaker','Laptop','Keyboard','Tag','TV'];
-    const addFake=()=>{
-      addDev(fakePool[fakeIdx%fakePool.length],rand(-92,-30),TYPES[rand(0,TYPES.length-1)]);
-      fakeIdx++;lp('G',80);render();
-    };
-    for(let i=0;i<5;i++)setTimeout(addFake,i*150);
-    interval=setInterval(()=>{
-      if(!scanning){clearInterval(interval);return}
-      devs.forEach(d=>{d.rssi=Math.max(-100,Math.min(-20,d.rssi+rand(-4,4)))});
-      if(Math.random()>.55)addFake();
-      render();
-    },1100);
-    S._btScanInt=interval;
-    T('SCANNING BLE...');
-    $('sBt')?.classList.add('on');
-  },'cg');
-  btn('STOP',()=>{scanning=false;clearInterval(interval);$('sBt')?.classList.remove('on');render();T('STOPPED')},'');
-  btn('SORT',()=>{devs.sort((a,b)=>b.rssi-a.rssi);render()},'cy');
-  btn('REAL BT',async()=>{
-    if(!navigator.bluetooth){T('WEB BT NOT SUPPORTED');return}
+    if(!navigator.bluetooth){
+      T('WEB BT NOT SUPPORTED');
+      scr.innerHTML+=`<div class="sl r" style="margin-top:4px;font-size:4.5px">[!] Requires Chrome/Edge on Android or desktop. Not supported on iOS/Firefox.</div>`;
+      return;
+    }
     try{
-      const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['battery_service','heart_rate']});
-      addDev(dev.name||'Unknown BLE',rand(-55,-30),'BLE');
-      render();T('REAL DEV ADDED!');vib([30,10,30]);
-    }catch(e){if(e.name!=='NotFoundError')T('BT: '+e.message.slice(0,16))}
+      T('OPENING BT PICKER...');
+      const dev=await navigator.bluetooth.requestDevice({
+        acceptAllDevices:true,
+        optionalServices:[
+          'battery_service','heart_rate','generic_access',
+          'generic_attribute','device_information'
+        ]
+      });
+      const existing=devs.findIndex(d=>d.id===dev.id);
+      if(existing===-1){
+        devs.unshift({id:dev.id,name:dev.name||'Unknown Device',device:dev});
+        lp('G',400);vib([30,10,30]);
+        T('FOUND: '+(dev.name||'Unknown').slice(0,18));
+        addLog('BT','Found: '+(dev.name||dev.id.slice(0,8)));
+      } else {
+        T('ALREADY IN LIST');
+      }
+      render();
+    }catch(e){
+      if(e.name==='NotFoundError')T('NO DEVICE SELECTED');
+      else T('BT ERR: '+e.message.slice(0,18));
+    }
+  },'cg');
+
+  btn('CONNECT',async()=>{
+    if(!devs.length){T('SCAN FIRST');return}
+    const d=devs[0];
+    T('CONNECTING...');startLoad(4000);
+    try{
+      const gatt=await d.device.gatt.connect();
+      T('CONNECTED: '+(d.name||'?').slice(0,16));
+      vib([40,20,40]);lp('G',600);
+      addLog('BT','GATT OK: '+d.name);
+      // Store for use in BT CONNECT app
+      S.btDev={...d,connected:true};S.btGatt=gatt;
+      const existing=S.btDevs.findIndex(x=>x.id===d.id);
+      if(existing===-1)S.btDevs.push({...d,connected:true,alias:null});
+      else S.btDevs[existing].connected=true;
+    }catch(e){T('GATT FAILED: '+e.message.slice(0,16))}
   },'co');
+
+  btn('GO GATT',()=>{
+    if(!devs.length){T('SCAN FIRST');return}
+    openApp('bt_pair');
+  },'cy');
+
   btn('CLEAR',()=>{devs=[];render()},'');
   _H={ok:()=>document.querySelector('.cb.cg')?.click()};
 }
@@ -631,6 +645,10 @@ function appTvScan(){
 
 /* ================================================
    4. SUB-GHz
+   NOTE: Browsers have zero access to radio hardware.
+   Real Sub-GHz scanning requires physical RF chips
+   (CC1101 etc). This is a SIMULATION / visualizer.
+   Labeled clearly so there's no confusion.
 ================================================ */
 const SUBF=[315.00,433.92,868.35,915.00];
 function appSubGHz(){
@@ -650,7 +668,7 @@ function appSubGHz(){
 }
 function rSub(){
   const f=SUBF[S._subIdx||1].toFixed(2);
-  const st=S._subOn?'<span class="bl">[RX ACTIVE]</span>':'[IDLE]';
+  const st=S._subOn?'<span class="bl">[SIM ACTIVE]</span>':'[IDLE]';
   const sigs=(S._subSigs||[]).slice(-6).reverse().map(s=>
     `<div class="scan-row"><span style="font-size:4.5px;color:var(--fgd);font-family:var(--mo);width:28px">${s.m}</span><span class="name">${s.f}MHz</span><span class="extra">${s.r}dBm</span></div>`
   ).join('');
@@ -662,6 +680,8 @@ function rSub(){
     ${sigs||'<div class="sl d">No signals captured</div>'}
     <div class="hr"></div>
     <div class="sl d">TOTAL: ${(S._subSigs||[]).length}</div>
+    <div class="hr"></div>
+    <div class="sl r" style="font-size:4px;white-space:normal;line-height:1.5">[SIM] Browsers cannot access RF hardware. Real Sub-GHz requires CC1101 chip + firmware.</div>
   </div>`;
 }
 function subScan(){
@@ -877,110 +897,426 @@ async function sonyInfo(){const d=await sonyReq('system','getSystemInformation',
 /* ================================================
    9. IR BLASTER
 ================================================ */
+/* ================================================
+   IR BLASTER
+   Real NEC protocol hex codes per brand.
+   Sends via Web Serial to Arduino running IRremote.
+   Arduino sketch: read line from Serial, call
+     IrSender.sendNEC(0xHEXCODE, 32);
+   Pin 9 + 100ohm resistor + IR LED (940nm).
+
+   Code format sent over serial: "NEC:XXXXXXXX"
+   or named aliases like "POWER","VOLU" etc.
+   Arduino maps these to brand-specific hex.
+================================================ */
+
+/* Real NEC hex codes. Format: address<<16 | command */
+const IR_CODES = {
+  samsung:{
+    POWER:'0xE0E040BF', VOLU:'0xE0E0E01F', VOLD:'0xE0E0D02F',
+    MUTE:'0xE0E0F00F', CHU:'0xE0E048B7',  CHDN:'0xE0E008F7',
+    UP:'0xE0E006F9',   DOWN:'0xE0E08679', LEFT:'0xE0E0A659',
+    RIGHT:'0xE0E046B9',OK:'0xE0E016E9',   BACK:'0xE0E01AE5',
+    HOME:'0xE0E09768', MENU:'0xE0E058A7', SOURCE:'0xE0E0807F',
+    NUM1:'0xE0E020DF', NUM2:'0xE0E0A05F', NUM3:'0xE0E0609F',
+    NUM4:'0xE0E010EF', NUM5:'0xE0E0906F', NUM6:'0xE0E050AF',
+    NUM7:'0xE0E030CF', NUM8:'0xE0E0B04F', NUM9:'0xE0E000FF',
+    NUM0:'0xE0E034CB', INFO:'0xE0E0F20D', EXIT:'0xE0E0B44B',
+  },
+  lg:{
+    POWER:'0x20DF10EF', VOLU:'0x20DF40BF',  VOLD:'0x20DFC03F',
+    MUTE:'0x20DF906F',  CHU:'0x20DF00FF',   CHDN:'0x20DF807F',
+    UP:'0x20DF02FD',    DOWN:'0x20DF827D',  LEFT:'0x20DFE01F',
+    RIGHT:'0x20DF609F', OK:'0x20DF22DD',    BACK:'0x20DF14EB',
+    HOME:'0x20DF3EC1',  MENU:'0x20DFC23D',  SOURCE:'0x20DFD02F',
+    NUM1:'0x20DF8877',  NUM2:'0x20DF48B7',  NUM3:'0x20DFC837',
+    NUM4:'0x20DF28D7',  NUM5:'0x20DFA857',  NUM6:'0x20DF6897',
+    NUM7:'0x20DFE817',  NUM8:'0x20DF18E7',  NUM9:'0x20DF9867',
+    NUM0:'0x20DF08F7',  INFO:'0x20DFF00F',  EXIT:'0x20DFDA25',
+  },
+  sony:{
+    POWER:'0xA90',   VOLU:'0x490',   VOLD:'0xC90',
+    MUTE:'0x290',    CHU:'0x090',    CHDN:'0x890',
+    UP:'0x2F',       DOWN:'0xAF',    LEFT:'0x2CF',
+    RIGHT:'0x6CF',   OK:'0xBCF',     BACK:'0x62F',
+    HOME:'0x729',    MENU:'0x529',   SOURCE:'0xA50',
+    NUM1:'0x010',    NUM2:'0x810',   NUM3:'0x410',
+    NUM4:'0xC10',    NUM5:'0x210',   NUM6:'0xA10',
+    NUM7:'0x610',    NUM8:'0xE10',   NUM9:'0x110',
+    NUM0:'0x910',    INFO:'0x5CF',   EXIT:'0x1CF',
+  },
+  philips:{
+    POWER:'0x170C',  VOLU:'0x1003',  VOLD:'0x1002',
+    MUTE:'0x100D',   CHU:'0x100A',   CHDN:'0x100B',
+    UP:'0x1058',     DOWN:'0x1059',  LEFT:'0x105A',
+    RIGHT:'0x105B',  OK:'0x105C',    BACK:'0x1000',
+    HOME:'0x1070',   MENU:'0x1071',  SOURCE:'0x1038',
+    NUM1:'0x1001',   NUM2:'0x1002',  NUM3:'0x1003',
+  },
+  universal:{
+    POWER:'0xFFFFFF01', VOLU:'0xFFFFFF02', VOLD:'0xFFFFFF03',
+    MUTE:'0xFFFFFF04',  CHU:'0xFFFFFF05',  CHDN:'0xFFFFFF06',
+  }
+};
+
+const IR_BRANDS = Object.keys(IR_CODES);
+let _irBrand = localStorage.getItem('ir_brand')||'samsung';
+let _irPage  = 'remote'; // 'remote' | 'numpad' | 'info'
+
 function appIR(){
-  scr.innerHTML=`<div class="fi">
-    <div class="sl h">[-] IR BLASTER</div>
-    <div class="sl">${S.port?'[SERIAL OK]':'[NO SERIAL]'}</div>
-    <div class="hr"></div>
-    <div class="sl d">Needs: Arduino + IR LED</div>
-    <div class="sl d">Pin 9 + 100ohm + IRremote lib</div>
-    <div class="hr"></div>
-    <div class="sl ${'serial' in navigator?'h':'r'}">${'serial' in navigator?'[OK] Web Serial OK':'[!] Chrome desktop only'}</div>
-  </div>`;
-  clearCtx();
-  btn('CONNECT',async()=>{
-    if(!('serial' in navigator)){T('CHROME DESKTOP REQUIRED');return}
-    try{
-      S.port=await navigator.serial.requestPort();
-      await S.port.open({baudRate:9600});
-      const enc=new TextEncoderStream();enc.readable.pipeTo(S.port.writable);
-      S.portWriter=enc.writable.getWriter();
-      T('SERIAL CONNECTED!');lp('G',600);openApp('ir');
-    }catch(e){T('ERR: '+e.message.slice(0,14))}
-  },'cg');
-  btn('POWER',()=>irSend('POWER'),'cr');
-  btn('VOL+',()=>irSend('VOLU'),'');btn('VOL-',()=>irSend('VOLD'),'');
-  btn('CH+',()=>irSend('CHU'),'');btn('CH-',()=>irSend('CHD'),'');
-  btn('MUTE',()=>irSend('MUTE'),'cy');
-  _H={sU:()=>irSend('VOLU'),sD:()=>irSend('VOLD'),ok:()=>irSend('POWER')};
-}
-async function irSend(cmd){
-  flashIR();vib(12);
-  if(S.portWriter){try{await S.portWriter.write(cmd+'\n');T('IR: '+cmd)}catch(e){T('SEND FAILED')}}
-  else T('CONNECT SERIAL FIRST');
+  _irBrand = localStorage.getItem('ir_brand')||'samsung';
+  rIR();
 }
 
+function rIR(){
+  const connected = !!S.portWriter;
+  const brand     = _irBrand;
+  const codes     = IR_CODES[brand];
+
+  if(_irPage==='info'){
+    scr.innerHTML=`<div class="fi sl2" style="height:100%">
+      <div class="sl h">IR BLASTER — SETUP</div>
+      <div class="hr"></div>
+      <div class="sl d" style="white-space:normal;line-height:1.6;font-size:4.8px">
+        1. Wire Arduino:<br>
+        &nbsp;&nbsp;Pin 9 -> 100ohm -> IR LED (+)<br>
+        &nbsp;&nbsp;IR LED (-) -> GND<br><br>
+        2. Upload sketch (IRremote lib):<br>
+        &nbsp;&nbsp;#include &lt;IRremote.hpp&gt;<br>
+        &nbsp;&nbsp;void setup(){IrSender.begin(9);Serial.begin(9600);}<br>
+        &nbsp;&nbsp;void loop(){<br>
+        &nbsp;&nbsp;&nbsp;if(Serial.available()){<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;String s=Serial.readStringUntil('\\n');<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;s.trim();<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;if(s.startsWith("NEC:")){<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;long c=strtol(s.substring(4).c_str(),NULL,16);<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IrSender.sendNEC(c,32);<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;}<br><br>
+        3. Connect at 9600 baud.
+      </div>
+      <div class="hr"></div>
+      <div class="sl ${'serial' in navigator?'h':'r'}">${'serial' in navigator?'[OK] Web Serial ready':'[!] Chrome/Edge desktop only'}</div>
+    </div>`;
+    clearCtx();
+    btn('BACK',()=>{_irPage='remote';rIR()},'cg');
+    btn('CONNECT',irConnect,'co');
+    return;
+  }
+
+  if(_irPage==='numpad'){
+    const nums=['1','2','3','4','5','6','7','8','9','BACK','0','EXIT'];
+    const cells=nums.map(n=>`
+      <div onclick="irSendKey('NUM${n==='0'?'0':n==='BACK'?'':n==='EXIT'?'':n}','${n}')"
+        style="background:#1a0800;border:1px solid #2a1000;border-radius:4px;
+               padding:6px 2px;text-align:center;cursor:pointer;
+               font-family:var(--px);font-size:6px;color:${connected?'var(--fl)':'#333'};
+               position:relative;z-index:2">
+        ${n}
+      </div>`).join('');
+    scr.innerHTML=`<div class="fi" style="height:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sl h">NUMPAD</span>
+        <span class="sl d" style="font-size:4px">${brand.toUpperCase()} ${connected?'<span style="color:var(--fl)">[LIVE]</span>':'[NO SERIAL]'}</span>
+      </div>
+      <div class="hr"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:2px;position:relative;z-index:2">
+        ${cells}
+      </div>
+    </div>`;
+    clearCtx();
+    btn('REMOTE',()=>{_irPage='remote';rIR()},'cg');
+    btn('CONNECT',irConnect,'co');
+    _H={ok:()=>irSendKey('NUM5','5')};
+    return;
+  }
+
+  // Main remote view
+  const mk=(label,key,col='')=>`
+    <div onclick="irSendKey('${key}','${label}')"
+      style="background:linear-gradient(180deg,#1a0800,#0d0400);
+             border:1px solid ${connected?'#2a1000':'#111'};border-radius:4px;
+             padding:5px 2px;text-align:center;cursor:pointer;
+             font-family:var(--px);font-size:5px;
+             color:${connected?(col||'var(--fl)'):'#2a1200'};
+             position:relative;z-index:2;transition:filter .1s"
+      onpointerdown="this.style.filter='brightness(.6)'"
+      onpointerup="this.style.filter=''">${label}</div>`;
+
+  scr.innerHTML=`<div class="fi" style="height:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+      <span class="sl h" style="font-size:6px">${brand.toUpperCase()}</span>
+      <span style="font-family:var(--mo);font-size:4.5px;color:${connected?'var(--fl)':'var(--fr)'}">${connected?'[SERIAL OK]':'[NO SERIAL]'}</span>
+    </div>
+    <div class="hr"></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:1px;position:relative;z-index:2">
+      ${mk('POWER','POWER','var(--fr)')}
+      ${mk('MUTE','MUTE','var(--fp)')}
+      ${mk('SOURCE','SOURCE','')}
+      ${mk('INFO','INFO','')}
+
+      ${mk('CH+','CHU','')}
+      ${mk('CH-','CHDN','')}
+      ${mk('VOL+','VOLU','')}
+      ${mk('VOL-','VOLD','')}
+
+      <div style="grid-column:span 4;display:grid;grid-template-columns:repeat(3,1fr);gap:3px">
+        <div></div>${mk('UP','UP','')}   <div></div>
+        ${mk('LEFT','LEFT','')}${mk('OK','OK','#fff')}${mk('RIGHT','RIGHT','')}
+        <div></div>${mk('DOWN','DOWN','')}<div></div>
+      </div>
+
+      ${mk('BACK','BACK','')}
+      ${mk('HOME','HOME','var(--fl)')}
+      ${mk('MENU','MENU','')}
+      ${mk('EXIT','EXIT','')}
+    </div>
+  </div>`;
+
+  clearCtx();
+  btn('CONNECT', irConnect, connected?'co':'cg');
+  btn('NUMPAD',  ()=>{_irPage='numpad';rIR()}, '');
+  btn('BRAND',   irCycleBrand, 'cy');
+  btn('SETUP',   ()=>{_irPage='info';rIR()}, '');
+  _H={
+    up:()=>irSendKey('UP','UP'), dn:()=>irSendKey('DOWN','DOWN'),
+    lt:()=>irSendKey('LEFT','LEFT'), rt:()=>irSendKey('RIGHT','RIGHT'),
+    ok:()=>irSendKey('OK','OK'),
+    sU:()=>irSendKey('VOLU','VOL+'), sD:()=>irSendKey('VOLD','VOL-')
+  };
+}
+
+async function irConnect(){
+  if(!('serial' in navigator)){T('CHROME/EDGE DESKTOP ONLY');return}
+  if(S.portWriter){T('ALREADY CONNECTED');return}
+  try{
+    S.port=await navigator.serial.requestPort();
+    await S.port.open({baudRate:9600});
+    const enc=new TextEncoderStream();
+    enc.readable.pipeTo(S.port.writable);
+    S.portWriter=enc.writable.getWriter();
+    T('IR SERIAL CONNECTED!');lp('G',600);vib([30,10,30]);rIR();
+    addLog('IR','Serial connected');
+  }catch(e){T('ERR: '+e.message.slice(0,18))}
+}
+
+function irCycleBrand(){
+  const idx=(IR_BRANDS.indexOf(_irBrand)+1)%IR_BRANDS.length;
+  _irBrand=IR_BRANDS[idx];
+  localStorage.setItem('ir_brand',_irBrand);
+  T('BRAND: '+_irBrand.toUpperCase());rIR();
+}
+
+async function irSendKey(key, label){
+  flashIR();vib(12);
+  const code = IR_CODES[_irBrand]?.[key];
+  if(!code){T('[!] NO CODE: '+key+' / '+_irBrand);return}
+  const line = 'NEC:'+code+'\n';
+  if(S.portWriter){
+    try{await S.portWriter.write(line);T('IR '+_irBrand.toUpperCase()+' > '+label)}
+    catch(e){T('SEND FAILED: '+e.message.slice(0,14))}
+  } else {
+    // Fallback: show what would be sent
+    T('[NO SERIAL] Would send: '+code.slice(0,12));
+  }
+}
+
+/* keep old irSend alias for compatibility */
+async function irSend(cmd){return irSendKey(cmd,cmd)}
+
 /* ================================================
-   10. BT CONNECT
+   10. BT CONNECT  —  full GATT control
+   Pair, read device info, live notify, write chars
 ================================================ */
 function appBT(){
   rBT();clearCtx();
-  btn('SCAN',btScan,'cg');btn('CONNECT',btConn,'co');
-  btn('BATTERY',btBatt,'cy');btn('HR',btHR,'cb2');btn('DISC',btDisc,'cr');
-  _H={up:()=>{S.btSel=Math.max(0,S.btSel-1);rBT()},dn:()=>{S.btSel=Math.min(S.btDevs.length-1,S.btSel+1);rBT()},ok:btConn};
+  btn('PAIR',btScan,'cg');
+  btn('INFO',btInfo,'co');
+  btn('NOTIFY',btNotify,'cy');
+  btn('WRITE',btWrite,'cb2');
+  btn('DISC',btDisc,'cr');
+  _H={
+    up:()=>{S.btSel=Math.max(0,S.btSel-1);rBT()},
+    dn:()=>{S.btSel=Math.min(S.btDevs.length-1,S.btSel+1);rBT()},
+    ok:()=>{if(S.btDevs.length)btConn();else btScan()}
+  };
 }
 function rBT(){
   const lst=S.btDevs.length
-    ?S.btDevs.slice(0,6).map((d,i)=>`<div class="mi${i===S.btSel?' s':''}" onclick="S.btSel=${i};rBT()">
-        <span class="ic">[B]</span>
-        <span style="flex:1;margin-left:3px">${(d.alias||d.name).slice(0,14)}</span>
-        ${d.connected?'<span class="bt-badge ok">ON</span>':''}
-      </div>`).join('')
-    :'<div class="sl d">> Press SCAN</div>';
+    ?S.btDevs.slice(0,6).map((d,i)=>{
+        const sel=i===S.btSel;
+        return `<div class="mi${sel?' s':''}" onclick="S.btSel=${i};rBT();btConn()">
+          <span class="ic">[B]</span>
+          <span style="flex:1;margin-left:3px;overflow:hidden;text-overflow:ellipsis">${(d.alias||d.name).slice(0,15)}</span>
+          <span style="font-size:4px;font-family:var(--mo);margin-right:2px">${d.battery!=null?d.battery+'%':''}</span>
+          ${d.connected?'<span class="bt-badge ok">ON</span>':'<span class="bt-badge">OFF</span>'}
+        </div>`;
+      }).join('')
+    :'<div class="sl d">> Press PAIR to find device</div>';
+  const conn=S.btGatt?.connected;
   const st=S.btDev
-    ?`<div class="sl h"><span class="bl">[B]</span> ${(S.btDev.alias||S.btDev.name).slice(0,16)}</div><div class="sl d">GATT: ${S.btGatt?.connected?'OPEN':'CLOSED'}</div>`
-    :'<div class="sl d">No device connected</div>';
-  scr.innerHTML=`<div class="fi">${st}<div class="hr"></div>${lst}</div>`;
-  $('sBt')?.classList.toggle('on',!!S.btDev&&S.btGatt?.connected);
+    ?`<div class="sl h" style="font-size:6px"><span class="${conn?'bl':''}">[B]</span> ${(S.btDev.alias||S.btDev.name).slice(0,16)}</div>
+       <div class="sl d">GATT: ${conn?'<span style=\'color:var(--fl)\'>OPEN</span>':'CLOSED'}</div>
+       ${S.btDev.battery!=null?`<div class="sl d">BATT: ${S.btDev.battery}%</div>`:''}
+       ${S.btDev.model?`<div class="sl d">MDL: ${S.btDev.model}</div>`:''}
+       ${S.btDev.mfr?`<div class="sl d">MFR: ${S.btDev.mfr}</div>`:''}`
+    :'<div class="sl d">No device paired</div>';
+  scr.innerHTML=`<div class="fi sl2" style="height:100%">
+    ${st}<div class="hr"></div>${lst}
+    ${(S._btNotifyLog||[]).length?`<div class="hr"></div><div style="font-family:var(--mo);font-size:4.5px;color:var(--fl);position:relative;z-index:2">${(S._btNotifyLog||[]).slice(-3).map(l=>`<div>${l}</div>`).join('')}</div>`:''}
+  </div>`;
+  $('sBt')?.classList.toggle('on',!!conn);
 }
 async function btScan(){
   if(!navigator.bluetooth){T('WEB BT NOT SUPPORTED');return}
   try{
-    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['battery_service','heart_rate','generic_access']});
+    T('OPENING BT PICKER...');
+    const dev=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true,
+      optionalServices:['battery_service','heart_rate','generic_access','generic_attribute','device_information',
+        '0000180a-0000-1000-8000-00805f9b34fb','0000180f-0000-1000-8000-00805f9b34fb']
+    });
     const existing=S.btDevs.findIndex(d=>d.id===dev.id);
-    const entry={id:dev.id,name:dev.name||'Unknown',alias:null,device:dev,connected:false};
+    const entry={id:dev.id,name:dev.name||'Unknown',alias:null,device:dev,connected:false,battery:null,model:null,mfr:null};
     if(existing===-1){S.btDevs.push(entry);S.btSel=S.btDevs.length-1}
     else{S.btDevs[existing].device=dev;S.btSel=existing}
     dev.addEventListener('gattserverdisconnected',()=>{
       const idx=S.btDevs.findIndex(d=>d.id===dev.id);
       if(idx!==-1)S.btDevs[idx].connected=false;
       if(S.btDev?.id===dev.id){S.btGatt=null;lp('R',600)}
+      S._btNotifyLog=[];
       if(S.app==='bt_connect')rBT();
       T('BT DISCONNECTED');
     });
-    T('FOUND: '+(dev.name||'?').slice(0,14));vib([30,10,30]);lp('G',400);rBT();
-  }catch(e){if(e.name!=='NotFoundError')T('BT: '+e.message.slice(0,14))}
+    T('FOUND: '+(dev.name||'?').slice(0,16));vib([30,10,30]);lp('G',400);rBT();
+    await btConn();
+  }catch(e){if(e.name!=='NotFoundError')T('BT: '+e.message.slice(0,18))}
 }
 async function btConn(){
-  const d=S.btDevs[S.btSel];if(!d){T('SELECT DEVICE FIRST');return}
+  const d=S.btDevs[S.btSel];
+  if(!d){T('PAIR A DEVICE FIRST');return}
+  if(S.btGatt?.connected&&S.btDev?.id===d.id){T('ALREADY CONNECTED');return}
   T('CONNECTING...');startLoad(4000);
   try{
-    S.btGatt=await d.device.gatt.connect();S.btDev=d;d.connected=true;
-    T('CONNECTED!');vib([40,20,40]);lp('G',600);addLog('BT','Connected: '+d.name);rBT();
-  }catch(e){T('GATT FAILED');d.connected=false;rBT()}
+    S.btGatt=await d.device.gatt.connect();
+    S.btDev=d;d.connected=true;
+    T('CONNECTED!');vib([40,20,40]);lp('G',600);addLog('BT','Connected: '+d.name);
+    rBT();btBattSilent();
+  }catch(e){T('GATT FAILED: '+e.message.slice(0,16));d.connected=false;rBT()}
 }
-async function btBatt(){
-  if(!S.btGatt?.connected){T('CONNECT FIRST');return}
+async function btBattSilent(){
+  if(!S.btGatt?.connected)return;
   try{
-    const s=await S.btGatt.getPrimaryService('battery_service');
-    const c=await s.getCharacteristic('battery_level');
-    const v=await c.readValue();T('BATTERY: '+v.getUint8(0)+'%');
-  }catch(e){T('NO BATTERY SVC')}
+    const svc=await S.btGatt.getPrimaryService('battery_service');
+    const chr=await svc.getCharacteristic('battery_level');
+    const v=await chr.readValue();
+    const pct=v.getUint8(0);
+    if(S.btDev)S.btDev.battery=pct;
+    const idx=S.btDevs.findIndex(d=>d.id===S.btDev?.id);
+    if(idx!==-1)S.btDevs[idx].battery=pct;
+    rBT();
+    if(chr.properties.notify){
+      await chr.startNotifications();
+      chr.addEventListener('characteristicvaluechanged',e=>{
+        const p=e.target.value.getUint8(0);
+        if(S.btDev)S.btDev.battery=p;
+        const i=S.btDevs.findIndex(d=>d.id===S.btDev?.id);
+        if(i!==-1)S.btDevs[i].battery=p;
+        rBT();
+      });
+    }
+  }catch(e){}
 }
-async function btHR(){
-  if(!S.btGatt?.connected){T('CONNECT FIRST');return}
+async function btInfo(){
+  if(!S.btGatt?.connected){if(S.btDevs.length){await btConn();if(!S.btGatt?.connected)return}else{T('PAIR FIRST');return}}
+  T('READING DEVICE INFO...');startLoad(3000);
+  const info={};
+  const charMap={'00002a29-0000-1000-8000-00805f9b34fb':'manufacturer','00002a24-0000-1000-8000-00805f9b34fb':'model',
+    '00002a25-0000-1000-8000-00805f9b34fb':'serial','00002a27-0000-1000-8000-00805f9b34fb':'hw_rev',
+    '00002a26-0000-1000-8000-00805f9b34fb':'fw_rev','00002a28-0000-1000-8000-00805f9b34fb':'sw_rev'};
   try{
-    const s=await S.btGatt.getPrimaryService('heart_rate');
-    const c=await s.getCharacteristic('heart_rate_measurement');
-    await c.startNotifications();
-    c.addEventListener('characteristicvaluechanged',e=>{T('HR: '+e.target.value.getUint8(1)+' BPM')});
-    T('HR MONITOR ON');
-  }catch(e){T('NO HR SERVICE')}
+    const svc=await S.btGatt.getPrimaryService('device_information');
+    const chrs=await svc.getCharacteristics();
+    for(const chr of chrs){
+      const key=charMap[chr.uuid]||chr.uuid.slice(4,8);
+      try{const v=await chr.readValue();info[key]=new TextDecoder().decode(v).replace(/[^\x20-\x7E]/g,'').trim()||'(empty)'}catch(e){}
+    }
+  }catch(e){info.note='device_information svc not found'}
+  try{
+    const bs=await S.btGatt.getPrimaryService('battery_service');
+    const bc=await bs.getCharacteristic('battery_level');
+    const bv=await bc.readValue();info.battery=bv.getUint8(0)+'%';
+    if(S.btDev)S.btDev.battery=bv.getUint8(0);
+  }catch(e){}
+  if(S.btDev){if(info.model)S.btDev.model=info.model.slice(0,16);if(info.manufacturer)S.btDev.mfr=info.manufacturer.slice(0,16)}
+  const rows=Object.entries(info).map(([k,v])=>`<div style="display:flex;gap:4px;font-family:var(--mo);font-size:4.8px;line-height:1.7;position:relative;z-index:2;border-bottom:1px solid rgba(255,107,0,.06)"><span style="width:56px;color:var(--fgd);flex-shrink:0">${k.toUpperCase()}</span><span style="color:#fff;overflow:hidden;text-overflow:ellipsis">${String(v).slice(0,28)}</span></div>`).join('');
+  scr.innerHTML=`<div class="fi sl2" style="height:100%"><div class="sl h">DEVICE INFO</div><div class="sl d">${S.btDev?.name||'Unknown'}</div><div class="hr"></div>${rows||'<div class="sl d">No info available</div>'}</div>`;
+  clearCtx();btn('BACK',()=>{rBT();clearCtx();appBT()},'cg');btn('RENAME',btRename,'cy');T('INFO READ');
+}
+async function btNotify(){
+  if(!S.btGatt?.connected){T('CONNECT FIRST');return}
+  S._btNotifyLog=S._btNotifyLog||[];
+  T('FINDING NOTIFY CHARS...');startLoad(3000);
+  const notifiables=[];
+  try{
+    const svcs=await S.btGatt.getPrimaryServices();
+    for(const svc of svcs){try{const chrs=await svc.getCharacteristics();for(const chr of chrs){if(chr.properties.notify||chr.properties.indicate)notifiables.push({svc:svc.uuid.slice(4,8),chr,uuid:chr.uuid})}}catch(e){}}
+  }catch(e){T('ERR: '+e.message.slice(0,16));return}
+  if(!notifiables.length){T('NO NOTIFY CHARS FOUND');return}
+  let subCount=0;
+  for(const n of notifiables){
+    try{
+      await n.chr.startNotifications();
+      n.chr.addEventListener('characteristicvaluechanged',e=>{
+        const bytes=Array.from(new Uint8Array(e.target.value.buffer));
+        const hex=bytes.map(b=>b.toString(16).padStart(2,'0')).join(' ');
+        const ascii=bytes.map(b=>b>=32&&b<127?String.fromCharCode(b):'.').join('');
+        const line=`[${n.svc}:${n.uuid.slice(4,8)}] ${hex.slice(0,18)} ${ascii.slice(0,8)}`;
+        S._btNotifyLog.push(line);if(S._btNotifyLog.length>20)S._btNotifyLog.shift();
+        if(S.app==='bt_connect'){const el=$('notifyOut');if(el){el.innerHTML=S._btNotifyLog.slice(-12).map(l=>`<div>${l}</div>`).join('');el.scrollTop=9999}}
+        lp('G',60);
+      });
+      subCount++;
+    }catch(e){}
+  }
+  scr.innerHTML=`<div class="fi sl2" style="height:100%"><div class="sl h">LIVE NOTIFY</div><div class="sl d">Subscribed: ${subCount}/${notifiables.length} chars</div><div class="hr"></div><div id="notifyOut" style="font-family:var(--mo);font-size:4.5px;color:var(--fg);line-height:1.6;position:relative;z-index:2">${(S._btNotifyLog||[]).slice(-12).map(l=>`<div>${l}</div>`).join('')||'<div style="color:var(--fgd)">Waiting for data...</div>'}</div></div>`;
+  clearCtx();btn('BACK',()=>{rBT();clearCtx();appBT()},'cg');btn('CLEAR',()=>{S._btNotifyLog=[];T('CLEARED')},'');
+  T('SUBSCRIBED TO '+subCount+' CHARS');
+}
+async function btWrite(){
+  if(!S.btGatt?.connected){T('CONNECT FIRST');return}
+  T('FINDING WRITABLE CHARS...');startLoad(2000);
+  const writables=[];
+  try{
+    const svcs=await S.btGatt.getPrimaryServices();
+    for(const svc of svcs){try{const chrs=await svc.getCharacteristics();for(const chr of chrs){if(chr.properties.write||chr.properties.writeWithoutResponse)writables.push({svc:svc.uuid.slice(4,8),chr,uuid:chr.uuid})}}catch(e){}}
+  }catch(e){T('ERR: '+e.message.slice(0,16));return}
+  if(!writables.length){T('NO WRITABLE CHARS');return}
+  const rows=writables.map((w,i)=>`<div class="mi" onclick="window._btWriteTo(${i})"><span class="ic">[W]</span><span style="flex:1;margin-left:3px;font-family:var(--mo);font-size:5px">${w.svc}:${w.uuid.slice(4,8)}..</span></div>`).join('');
+  scr.innerHTML=`<div class="fi sl2" style="height:100%"><div class="sl h">WRITE CHAR</div><div class="sl d">${writables.length} writable — tap to write hex</div><div class="hr"></div>${rows}</div>`;
+  window._btWriteTo=async(i)=>{
+    const w=writables[i];const hex=prompt('Hex bytes (e.g. 01 FF A3):');if(!hex)return;
+    try{
+      const bytes=hex.trim().split(/\s+/).map(h=>parseInt(h,16)).filter(b=>!isNaN(b));
+      if(!bytes.length){T('INVALID HEX');return}
+      await w.chr.writeValue(new Uint8Array(bytes));
+      T('WRITTEN: '+bytes.map(b=>b.toString(16).padStart(2,'0')).join(' '));
+      vib([20,10,20]);lp('G',300);
+    }catch(e){T('WRITE FAILED: '+e.message.slice(0,16))}
+  };
+  clearCtx();btn('BACK',()=>{rBT();clearCtx();appBT()},'cg');
+}
+function btRename(){
+  const d=S.btDev||S.btDevs[S.btSel];if(!d){T('NO DEVICE');return}
+  const name=prompt('Alias for device:',d.alias||d.name||'');
+  if(name!==null){d.alias=name||null;const idx=S.btDevs.findIndex(x=>x.id===d.id);if(idx!==-1)S.btDevs[idx].alias=d.alias;T('RENAMED');rBT()}
 }
 function btDisc(){
+  if(window._btNotifyRaf){cancelAnimationFrame(window._btNotifyRaf);window._btNotifyRaf=null}
   try{S.btGatt?.disconnect()}catch(e){}
   if(S.btDev){const idx=S.btDevs.findIndex(d=>d.id===S.btDev.id);if(idx!==-1)S.btDevs[idx].connected=false}
-  S.btDev=null;S.btGatt=null;rBT();T('DISCONNECTED');
+  S.btDev=null;S.btGatt=null;S._btNotifyLog=[];rBT();T('DISCONNECTED');
 }
 
 /* ================================================
@@ -1517,22 +1853,22 @@ function gpsStart(){
 ================================================ */
 function appHack(){
   const lines=[
-    {t:'p', s:'> FLIPPER REMOTE v5.1 BOOT...'},
-    {t:'ok',s:'[OK] CC1101 RF chip online'},
-    {t:'ok',s:'[OK] NRF52840 BLE active'},
-    {t:'ok',s:'[OK] ST25R NFC reader OK'},
-    {t:'p', s:'> Scanning 2.4GHz band...'},
-    {t:'ok',s:'[OK] 14 WiFi networks found'},
-    {t:'ok',s:'[OK] 9 BLE devices in range'},
-    {t:'p', s:'> Checking IR field...'},
-    {t:'ok',s:'[OK] IR carrier 38kHz detected'},
-    {t:'p', s:'> Sub-GHz @ 433.92MHz...'},
-    {t:'ok',s:'[OK] OOK signal: RSSI -42dBm'},
-    {t:'p', s:'> NFC scan...'},
-    {t:'ok',s:'[OK] ISO 14443-A 07h detected'},
-    {t:'p', s:'> GPS constellation...'},
-    {t:'ok',s:'[OK] Fix: 11 sats HDOP 0.9'},
-    {t:'ok',s:'> ALL SYSTEMS GO [FR]'},
+    {t:'p', s:'> RF SIM DEMO — NOT REAL DATA'},
+    {t:'ok',s:'[SIM] CC1101 RF chip online'},
+    {t:'ok',s:'[SIM] NRF52840 BLE active'},
+    {t:'ok',s:'[SIM] ST25R NFC reader OK'},
+    {t:'p', s:'> [SIM] Scanning 2.4GHz band...'},
+    {t:'ok',s:'[SIM] 14 WiFi networks found'},
+    {t:'ok',s:'[SIM] 9 BLE devices in range'},
+    {t:'p', s:'> [SIM] Checking IR field...'},
+    {t:'ok',s:'[SIM] IR carrier 38kHz detected'},
+    {t:'p', s:'> [SIM] Sub-GHz @ 433.92MHz...'},
+    {t:'ok',s:'[SIM] OOK signal: RSSI -42dBm'},
+    {t:'p', s:'> [SIM] NFC scan...'},
+    {t:'ok',s:'[SIM] ISO 14443-A 07h detected'},
+    {t:'p', s:'> [SIM] GPS constellation...'},
+    {t:'ok',s:'[SIM] Fix: 11 sats HDOP 0.9'},
+    {t:'ok',s:'> DEMO COMPLETE — USE REAL APPS'},
   ];
   let li=0;
   scr.innerHTML=`<div style="padding:2px;height:100%;overflow:hidden"><div class="term" id="hackOut"></div></div>`;
@@ -1552,11 +1888,11 @@ function appHack(){
     const el=$('hackOut');if(!el)return;
     clearInterval(window._hackInt);
     const pool=[
-      ()=>`> BLE: ${FAKE_BT[rand(0,FAKE_BT.length-1)]} RSSI:-${rand(30,90)}dBm`,
-      ()=>`> WiFi: ${FAKE_WIFI[rand(0,FAKE_WIFI.length-1)]} CH${rand(1,11)}`,
-      ()=>`> RF: ${SUBF[rand(0,3)]}MHz OOK RSSI:-${rand(25,75)}dBm`,
-      ()=>`> NFC: scan... ${Math.random()>.7?'tag found!':'no tag'}`,
-      ()=>`> IR: ${Math.random()>.5?'carrier detected':'idle'}`,
+      ()=>`[SIM] BLE: ${FAKE_BT[rand(0,FAKE_BT.length-1)]} RSSI:-${rand(30,90)}dBm`,
+      ()=>`[SIM] WiFi: ${FAKE_WIFI[rand(0,FAKE_WIFI.length-1)]} CH${rand(1,11)}`,
+      ()=>`[SIM] RF: ${SUBF[rand(0,3)]}MHz OOK RSSI:-${rand(25,75)}dBm`,
+      ()=>`[SIM] NFC: scan... ${Math.random()>.7?'tag found!':'no tag'}`,
+      ()=>`[SIM] IR: ${Math.random()>.5?'carrier detected':'idle'}`,
     ];
     window._hackInt=setInterval(()=>{
       el.innerHTML+=`<div class="ok">${pool[rand(0,pool.length-1)]()}</div>`;
@@ -1648,52 +1984,188 @@ function appLog(){
    S, vib(), lp(), addLog(), flashIR(), fetch, etc.
    Code saved to localStorage per slot.
 ================================================ */
+function appCustom(slot){
+  const KEY='fr_custom'+slot;
+  let code=localStorage.getItem(KEY)||defaultCustomScript(slot);
+  let output=[];
+
+  const renderApp=()=>{
+    const lines=output.slice(-12);
+    scr.innerHTML=`<div class="fi sl2" style="height:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sl h">CUSTOM SCRIPT ${slot}</span>
+        <span class="sl d" style="font-size:4px">${code.length} chars</span>
+      </div>
+      <div class="hr"></div>
+      <div id="csOut" style="font-family:var(--mo);font-size:5px;line-height:1.6;color:var(--fg);position:relative;z-index:2">
+        ${lines.length?lines.map(l=>`<div style="color:${l.err?'var(--fr)':'var(--fg)'}">${l.txt}</div>`).join(''):'<div style="color:var(--fgd)">> Press RUN to execute</div>'}
+      </div>
+    </div>`;
+  };
+
+  const log=(txt,err=false)=>{output.push({txt,err});if(output.length>50)output.shift();renderApp()};
+
+  const runScript=()=>{
+    output=[];log('> running script '+slot+'...');
+    // expose helper API to the script
+    const api={
+      T, btn, scr, S, vib, lp, addLog, flashIR,
+      log:(msg)=>log('  '+String(msg).slice(0,60)),
+      fetch, prompt, alert,
+      rand, shuffle,
+      samKey: typeof samKey!=='undefined'?samKey:()=>{},
+      lgSend: typeof lgSend!=='undefined'?lgSend:()=>{},
+      irSend,
+    };
+    try{
+      const fn=new Function(...Object.keys(api), '"use strict";\n'+code);
+      const result=fn(...Object.values(api));
+      if(result instanceof Promise){
+        result.then(v=>{if(v!==undefined)log('< '+String(v).slice(0,60))}).catch(e=>log('[ERR] '+e.message.slice(0,50),true));
+      }else if(result!==undefined){
+        log('< '+String(result).slice(0,60));
+      }
+    }catch(e){
+      log('[ERR] '+e.message.slice(0,60),true);
+    }
+    T('SCRIPT '+slot+' RUN');vib([20,10,20]);lp('G',300);
+  };
+
+  const editScript=()=>{
+    const newCode=prompt('Paste your script (JS):\nAvailable: T(), log(), vib(), btn(), scr, S, fetch, irSend, samKey, lgSend',code);
+    if(newCode!==null){
+      code=newCode;
+      localStorage.setItem(KEY,code);
+      T('SCRIPT SAVED!');
+      renderApp();
+    }
+  };
+
+  const renameScript=()=>{
+    const name=prompt('Script name (shown in menu):',MENU.find(m=>m.id==='custom'+slot)?.n||'CUSTOM SCRIPT '+slot);
+    if(name){
+      const m=MENU.find(x=>x.id==='custom'+slot);
+      if(m)m.n=name.toUpperCase().slice(0,18);
+      T('RENAMED!');renderApp();
+    }
+  };
+
+  renderApp();clearCtx();
+  btn('RUN',runScript,'cg');
+  btn('EDIT',editScript,'co');
+  btn('RENAME',renameScript,'cy');
+  btn('CLEAR OUT',()=>{output=[];renderApp()},'');
+  btn('RESET',()=>{code=defaultCustomScript(slot);localStorage.setItem(KEY,code);T('RESET TO DEFAULT');renderApp()},'cr');
+  _H={ok:runScript};
+}
+
 function appIPGrabber() {
-    scr.innerHTML = `<div class="fi"><div class="sl h">🎣 IP GRABBER</div><div class="hr"></div><div class="sl d">COPY LINK & SEND TO TARGET</div></div>`;
-    clearCtx();
-    btn('GENERATE', () => {
-        const url = `https://ipinfo.io/json`;
-        const encoded = encodeURIComponent(url);
-        const link = `${location.origin}?grab=${encoded}`;
-        navigator.clipboard.writeText(link).then(() => {
-            T('LINK COPIED');
-            showModal(`<div class="sl h">🎣 LINK</div><div style="background:#111;padding:8px;margin:8px 0;word-break:break-all;font-size:5px">${link}</div><button class="cb cg" onclick="closeModal()">CLOSE</button>`);
-        });
-    }, 'cg');
+  scr.innerHTML = `
+    <div class="fi">
+      <div class="sl h">🎣 IP GRABBER</div>
+      <div class="hr"></div>
+      <div class="sl d">1. GENERATE LINK</div>
+      <div class="sl d">2. SEND TO TARGET</div>
+      <div class="sl d">3. TARGET CLICKS LINK</div>
+      <div class="sl d">4. YOU SEE THEIR IP</div>
+    </div>
+  `;
+  clearCtx();
+
+  btn('GENERATE LINK', () => {
+    const grabUrl = `https://ipinfo.io/json`; // Free public API
+    const encoded = encodeURIComponent(grabUrl);
+    const link = `${location.origin}?grab=${encoded}`;
+    
+    navigator.clipboard.writeText(link).then(() => {
+      T('LINK COPIED TO CLIPBOARD!');
+      showModal(`<div class="sl h">🎣 IP GRABBER</div><div class="sl d">Copy this link and send it to your target:</div><div style="background:#111;padding:8px;margin:8px 0;border-radius:4px;word-break:break-all;font-size:5px">${link}</div><button class="cb cg" onclick="closeModal()">CLOSE</button>`);
+    });
+  }, 'cg');
 }
 
-if (window.location.search.includes('grab')) {
-    fetch('https://ipinfo.io/json')
-        .then(r => r.json())
-        .then(d => showModal(`<div class="sl h">🎣 GRABBED</div><div class="sl h">IP: ${d.ip}</div><div class="sl d">LOC: ${d.city} ${d.country}</div><div class="sl d">ISP: ${d.org}</div><button class="cb cg" onclick="closeModal()">CLOSE</button>`))
-        .catch(() => showModal(`<div class="sl h">🎣 ERROR</div><div class="sl d">Could not fetch IP</div>`));
+// This function runs automatically when the page loads
+if(window.location.search.includes('grab')) {
+  fetch('https://ipinfo.io/json')
+    .then(res => res.json())
+    .then(data => {
+      showModal(`
+        <div class="sl h">🎣 TARGET IP GRABBED</div>
+        <div class="sl h">IP: ${data.ip}</div>
+        <div class="sl d">CITY: ${data.city}</div>
+        <div class="sl d">REGION: ${data.region}</div>
+        <div class="sl d">COUNTRY: ${data.country}</div>
+        <div class="sl d">ISP: ${data.org}</div>
+        <button class="cb cg" onclick="closeModal()">CLOSE</button>
+      `);
+    });
 }
+  return function appBTSpammer() {
+  let spamming = false;
+  let timer = null;
 
-function appBTSpammer() {
-    let spamming = false;
-    let timer = null;
-    scr.innerHTML = `<div class="fi"><div class="sl h">📡 BT SPAMMER</div><div class="hr"></div><div class="sl d">SCAN & SELECT DEVICE</div></div>`;
-    clearCtx();
-    btn('SCAN', async () => {
-        if (!navigator.bluetooth) { T('NOT SUPPORTED'); return; }
+  scr.innerHTML = `
+    <div class="fi">
+      <div class="sl h">📡 BT SPAMMER</div>
+      <div class="hr"></div>
+      <div class="sl d">1. CLICK SCAN</div>
+      <div class="sl d">2. SELECT DEVICE</div>
+      <div class="sl d">3. CLICK SPAM</div>
+    </div>
+  `;
+  clearCtx();
+
+  btn('SCAN', async () => {
+    if (!navigator.bluetooth) {
+      T('Bluetooth not supported');
+      return;
+    }
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['device_information']
+      });
+      T('DEVICE SELECTED');
+      
+      // Store devices in global S object so we can spam them
+      if (!S.spamDevices) S.spamDevices = [];
+      S.spamDevices.push(device);
+      
+      // Show spam button to the user
+      const spamBtn = document.createElement('button');
+      spamBtn.className = 'cb cr';
+      spamBtn.style.margin = '4px auto';
+      spamBtn.style.display = 'block';
+      spamBtn.textContent = '⚡ START SPAMMING';
+      spamBtn.onclick = () => toggleSpam(device);
+      document.querySelector('.fi').appendChild(spamBtn);
+      
+    } catch (error) {
+      T('SCAN FAILED');
+    }
+  }, 'cg');
+
+  async function toggleSpam(device) {
+    if (spamming) {
+      clearInterval(timer);
+      spamming = false;
+      T('SPAM STOPPED');
+    } else {
+      spamming = true;
+      T('⚡ SPAMMING CONNECTION REQUESTS...');
+      
+      timer = setInterval(async () => {
         try {
-            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-            T('SELECTED');
-            btn('SPAM NOW', async () => {
-                if (spamming) { clearInterval(timer); spamming = false; T('STOPPED'); }
-                else {
-                    spamming = true;
-                    T('SPAMMING...');
-                    timer = setInterval(async () => {
-                        try {
-                            await device.gatt.connect();
-                            device.gatt.disconnect();
-                        } catch (e) {}
-                    }, 1000);
-                }
-            }, 'cr');
-        } catch (e) { T('ERROR'); }
-    }, 'cg');
+          // Force a connection request
+          await device.gatt.connect();
+          device.gatt.disconnect();
+          vib([20, 10, 20]); // Vibrate on success
+        } catch (e) {
+          // Ignore connection errors (that's the spam)
+        }
+      }, 1000); // Spam every 1 second
+    }
+  }
 }
 
 /* ================================================
