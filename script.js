@@ -102,6 +102,12 @@ const MENU = [
   {id:'notes',      ic:'≡', n:'NOTES',             cat:'FUN'},
   // GPS
   {id:'gps',        ic:'⊕', n:'GPS TRACKER',       cat:'GPS'},
+  // EXTRA TOOLS
+  {id:'timer',      ic:'◷', n:'TIMER / ALARM',     cat:'TOOL'},
+  {id:'converter',  ic:'⇄', n:'UNIT CONVERTER',    cat:'TOOL'},
+  {id:'randomizer', ic:'◈', n:'RANDOMIZER',        cat:'TOOL'},
+  {id:'ping',       ic:'◌', n:'PING / NETWORK',    cat:'TOOL'},
+  {id:'colors',     ic:'■', n:'COLOR PICKER',      cat:'TOOL'},
   // SYS
   {id:'wakelock',   ic:'⊙', n:'WAKE LOCK',         cat:'SYS'},
   {id:'share',      ic:'⊿', n:'SHARE',             cat:'SYS'},
@@ -315,6 +321,8 @@ async function openApp(id){
     fake_hack:appHack, calc:appCalc, notes:appNotes,
     gps:appGPS, wakelock:appWake, share:appShare,
     system:appSystem, bt_connect:appBT,
+    timer:appTimer, converter:appConverter, randomizer:appRandomizer,
+    ping:appPing, colors:appColors,
   };
   apps[id]?.();
 }
@@ -759,7 +767,7 @@ function appHack(){
     {t:'p',s:'> NFC scan...'},
     {t:'ok',s:'[OK] ISO 14443-A 07h detected'},
     {t:'p',s:'> GPS constellation...'},
-    {t:'ok',s:'[OK] Fix: 11 sats · HDOP 0.9'],
+    {t:'ok',s:'[OK] Fix: 11 sats · HDOP 0.9'},
     {t:'ok',s:'> ALL SYSTEMS GO ◈'},
   ];
   let li=0;
@@ -869,6 +877,357 @@ async function btConn(){const d=S.btDevs[S.btSel];if(!d){T('SELECT DEVICE FIRST'
 async function btBatt(){if(!S.btGatt?.connected){T('CONNECT FIRST');return}try{const s=await S.btGatt.getPrimaryService('battery_service');const c=await s.getCharacteristic('battery_level');const v=await c.readValue();T('BATTERY: '+v.getUint8(0)+'%')}catch(e){T('NO BATTERY SVC')}}
 async function btHR(){if(!S.btGatt?.connected){T('CONNECT FIRST');return}try{const s=await S.btGatt.getPrimaryService('heart_rate');const c=await s.getCharacteristic('heart_rate_measurement');await c.startNotifications();c.addEventListener('characteristicvaluechanged',e=>{T('❤ HR: '+e.target.value.getUint8(1)+' BPM')});T('HR MONITOR ON ❤')}catch(e){T('NO HR SERVICE')}}
 function btDisc(){try{S.btGatt?.disconnect()}catch(e){}if(S.btDev){const idx=S.btDevs.findIndex(d=>d.id===S.btDev.id);if(idx!==-1)S.btDevs[idx].connected=false}S.btDev=null;S.btGatt=null;rBT();T('DISCONNECTED')}
+
+/* ══════════════════════════════════
+   29. TIMER / ALARM
+   Countdown + repeating buzzer
+══════════════════════════════════ */
+function appTimer(){
+  let totalMs=0, remaining=0, running=false, finished=false;
+  let _tInt=null;
+  const presets=[{l:'1 MIN',ms:60000},{l:'5 MIN',ms:300000},{l:'10 MIN',ms:600000},{l:'25 MIN',ms:1500000}];
+
+  const fmt=ms=>{
+    const h=Math.floor(ms/3600000);
+    const m=Math.floor((ms%3600000)/60000);
+    const s=Math.floor((ms%60000)/1000);
+    return h?`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+           :`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+
+  const pct=()=>totalMs>0?Math.max(0,remaining/totalMs):0;
+
+  const render=()=>{
+    const col=finished?'var(--fr)':remaining<10000&&remaining>0?'var(--fr)':'var(--fl)';
+    scr.innerHTML=`<div class="fi">
+      <div class="sl h" style="text-align:center">◷ TIMER</div>
+      <div class="hr"></div>
+      <div class="bignum${finished?' danger':''}" style="font-size:clamp(22px,6.5vw,32px)">${fmt(remaining)}</div>
+      <div class="pw"><div class="pf" style="width:${pct()*100}%;background:${col}"></div></div>
+      <div class="sl d" style="text-align:center;margin-top:3px">${running?'<span class="bl">● RUNNING</span>':finished?'<span style="color:var(--fr)">■ DONE</span>':'○ READY'}</div>
+      <div class="hr"></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2">
+        ${presets.map(p=>`<span onclick="window._timerPreset(${p.ms})" style="font-family:var(--px);font-size:5px;color:var(--fgd);cursor:pointer;padding:3px 5px;border:1px solid #1e1e1e;border-radius:3px">${p.l}</span>`).join('')}
+      </div>
+    </div>`;
+    window._timerPreset=ms=>{remaining=ms;totalMs=ms;running=false;finished=false;clearInterval(_tInt);render()};
+  };
+
+  render();clearCtx();
+
+  btn('SET',()=>{
+    const input=prompt('Enter seconds (or mm:ss):','60');
+    if(!input)return;
+    if(input.includes(':')){
+      const [m,s]=input.split(':').map(Number);
+      totalMs=(m*60+s)*1000;
+    } else {
+      totalMs=parseInt(input)*1000;
+    }
+    if(isNaN(totalMs)||totalMs<=0){T('INVALID TIME');return}
+    remaining=totalMs;running=false;finished=false;clearInterval(_tInt);render();
+  },'cg');
+
+  btn('START',()=>{
+    if(!totalMs){T('SET TIME FIRST');return}
+    if(remaining<=0)remaining=totalMs;
+    running=true;finished=false;
+    clearInterval(_tInt);
+    _tInt=setInterval(()=>{
+      if(!running){clearInterval(_tInt);return}
+      remaining=Math.max(0,remaining-1000);
+      if(remaining<=0){
+        running=false;finished=true;
+        clearInterval(_tInt);
+        let buzz=0;
+        const alarm=setInterval(()=>{vib([150,80,150,80,150]);lp('R',500);buzz++;if(buzz>=5)clearInterval(alarm)},800);
+        T('TIMER DONE!  ■');addLog('Timer','Done');
+      }
+      render();
+    },1000);
+    render();
+  },'co');
+
+  btn('PAUSE',()=>{running=!running;if(running){const saved=remaining;_tInt=setInterval(()=>{if(!running){clearInterval(_tInt);return}remaining=Math.max(0,remaining-1000);if(remaining<=0){running=false;finished=true;clearInterval(_tInt);T('DONE!')}render()},1000)}render();T(running?'RUNNING':'PAUSED')},'cy');
+
+  btn('RESET',()=>{running=false;finished=false;remaining=totalMs;clearInterval(_tInt);render();T('RESET')},'');
+
+  _H={ok:()=>document.querySelector('.cb.co')?.click()};
+}
+
+/* ══════════════════════════════════
+   30. UNIT CONVERTER
+   Length · Weight · Temp · Speed · Data
+══════════════════════════════════ */
+function appConverter(){
+  const CATS={
+    'LENGTH':[
+      {n:'Meters',f:v=>v,t:v=>v},
+      {n:'Feet',f:v=>v/0.3048,t:v=>v*0.3048},
+      {n:'Inches',f:v=>v/0.0254,t:v=>v*0.0254},
+      {n:'Miles',f:v=>v/1609.34,t:v=>v*1609.34},
+      {n:'Km',f:v=>v/1000,t:v=>v*1000},
+      {n:'Yards',f:v=>v/0.9144,t:v=>v*0.9144},
+    ],
+    'WEIGHT':[
+      {n:'Kg',f:v=>v,t:v=>v},
+      {n:'Pounds',f:v=>v/0.453592,t:v=>v*0.453592},
+      {n:'Oz',f:v=>v/0.0283495,t:v=>v*0.0283495},
+      {n:'Grams',f:v=>v*1000,t:v=>v/1000},
+      {n:'Stones',f:v=>v/6.35029,t:v=>v*6.35029},
+    ],
+    'TEMP':[
+      {n:'Celsius',f:v=>v,t:v=>v},
+      {n:'Fahrenheit',f:v=>v*9/5+32,t:v=>(v-32)*5/9},
+      {n:'Kelvin',f:v=>v+273.15,t:v=>v-273.15},
+    ],
+    'SPEED':[
+      {n:'m/s',f:v=>v,t:v=>v},
+      {n:'km/h',f:v=>v*3.6,t:v=>v/3.6},
+      {n:'mph',f:v=>v*2.23694,t:v=>v/2.23694},
+      {n:'knots',f:v=>v*1.94384,t:v=>v/1.94384},
+    ],
+    'DATA':[
+      {n:'Bytes',f:v=>v,t:v=>v},
+      {n:'KB',f:v=>v/1024,t:v=>v*1024},
+      {n:'MB',f:v=>v/1048576,t:v=>v*1048576},
+      {n:'GB',f:v=>v/1073741824,t:v=>v*1073741824},
+      {n:'Bits',f:v=>v*8,t:v=>v/8},
+    ],
+  };
+  const cats=Object.keys(CATS);
+  let catIdx=0, val=1;
+
+  const render=()=>{
+    const cat=cats[catIdx];
+    const units=CATS[cat];
+    const baseVal=val;
+    const rows=units.map(u=>{
+      const result=u.f(baseVal);
+      const disp=Math.abs(result)<0.001||Math.abs(result)>999999?result.toExponential(3):parseFloat(result.toFixed(4));
+      return `<div class="mi" onclick="window._cvSet(${baseVal},${units.indexOf(u)})">
+        <span class="ic" style="width:40px;font-family:var(--mo);font-size:5.5px;color:var(--fl)">${disp}</span>
+        <span style="margin-left:4px;font-size:5px">${u.n}</span>
+      </div>`;
+    }).join('');
+    scr.innerHTML=`<div class="fi sl2">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="sl h" style="font-size:6px">⇄ ${cat}</span>
+        <span class="sl d" style="font-size:4.5px">${catIdx+1}/${cats.length}</span>
+      </div>
+      <div class="sl d" style="text-align:center;font-size:5px">INPUT: ${baseVal}</div>
+      <div class="hr"></div>
+      ${rows}
+    </div>`;
+    window._cvSet=(v,ui)=>{
+      // convert from that unit to base, then re-render as base
+      val=CATS[cats[catIdx]][ui].t(v);render();
+    };
+  };
+
+  render();clearCtx();
+  btn('◄ CAT',()=>{catIdx=(catIdx-1+cats.length)%cats.length;render()},'');
+  btn('CAT ►',()=>{catIdx=(catIdx+1)%cats.length;render()},'');
+  btn('INPUT',()=>{const v=parseFloat(prompt('Enter value:','1'));if(!isNaN(v)){val=v;render()}},'cg');
+  btn('RESET',()=>{val=1;render()},'');
+  _H={lt:()=>{catIdx=(catIdx-1+cats.length)%cats.length;render()},rt:()=>{catIdx=(catIdx+1)%cats.length;render()},ok:()=>document.querySelector('.cb.cg')?.click()};
+}
+
+/* ══════════════════════════════════
+   31. RANDOMIZER
+   Dice · Coin · Numbers · Shuffle
+══════════════════════════════════ */
+function appRandomizer(){
+  let lastResult='---';let history=[];
+  const DICE=[4,6,8,10,12,20,100];
+  let diceIdx=2; // default d8
+
+  const addResult=(label,val)=>{
+    lastResult=val;
+    history.unshift({l:label,v:val,t:new Date().toTimeString().slice(0,8)});
+    if(history.length>8)history.pop();
+    render();vib([20,10,20]);lp('G',300);
+  };
+
+  const render=()=>{
+    scr.innerHTML=`<div class="fi">
+      <div class="sl h" style="text-align:center">◈ RANDOMIZER</div>
+      <div class="bignum" style="font-size:clamp(20px,5.5vw,28px)">${lastResult}</div>
+      <div class="hr"></div>
+      <div class="sl d" style="text-align:center;font-size:5px">d${DICE[diceIdx]} selected  ◄ ►</div>
+      <div class="hr"></div>
+      ${history.slice(0,5).map(h=>`<div style="display:flex;gap:4px;font-family:var(--mo);font-size:5px;color:var(--fgd);position:relative;z-index:2"><span style="color:var(--fgd)">${h.t}</span><span style="color:var(--fl)">[${h.l}]</span><span>${h.v}</span></div>`).join('')}
+    </div>`;
+  };
+
+  render();clearCtx();
+  btn('DICE',()=>addResult('d'+DICE[diceIdx],rand(1,DICE[diceIdx])),'cg');
+  btn('COIN',()=>addResult('COIN',Math.random()>.5?'HEADS ▲':'TAILS ▼'),'co');
+  btn('1-100',()=>addResult('1-100',rand(1,100)),'cy');
+  btn('◄d',()=>{diceIdx=(diceIdx-1+DICE.length)%DICE.length;render()},'');
+  btn('d►',()=>{diceIdx=(diceIdx+1)%DICE.length;render()},'');
+  btn('RANGE',()=>{
+    const a=parseInt(prompt('Min:','1')||'1');
+    const b=parseInt(prompt('Max:','100')||'100');
+    if(!isNaN(a)&&!isNaN(b)&&b>a)addResult(`${a}-${b}`,rand(a,b));
+    else T('INVALID RANGE');
+  },'cp');
+  btn('CLEAR',()=>{history=[];lastResult='---';render()},'');
+  _H={
+    lt:()=>{diceIdx=(diceIdx-1+DICE.length)%DICE.length;render()},
+    rt:()=>{diceIdx=(diceIdx+1)%DICE.length;render()},
+    ok:()=>addResult('d'+DICE[diceIdx],rand(1,DICE[diceIdx]))
+  };
+}
+
+/* ══════════════════════════════════
+   32. PING / NETWORK INFO
+   Latency test + device IP + connection info
+══════════════════════════════════ */
+function appPing(){
+  let results=[];let running=false;
+  const targets=[
+    {n:'Google DNS',url:'https://dns.google/resolve?name=a.test&type=A'},
+    {n:'Cloudflare',url:'https://1.1.1.1/dns-query?name=test.&type=A'},
+    {n:'OpenDNS',url:'https://api.openresolve.com/'},
+  ];
+  let targetIdx=0;
+
+  const render=()=>{
+    const c=navigator.connection;
+    const avg=results.length?Math.round(results.reduce((a,b)=>a+b)/results.length):0;
+    const min=results.length?Math.min(...results):0;
+    const max=results.length?Math.max(...results):0;
+    scr.innerHTML=`<div class="fi">
+      <div class="sl h">◌ PING / NETWORK</div>
+      <div class="hr"></div>
+      <div class="sl d">TARGET: ${targets[targetIdx].n}</div>
+      <div class="sl d">TYPE: ${c?.effectiveType||'?'} · ${c?.downlink||'?'} Mbps</div>
+      <div class="sl d">RTT: ~${c?.rtt||'?'}ms</div>
+      <div class="hr"></div>
+      ${results.length?`
+        <div class="sl h" style="text-align:center">${results[results.length-1]}ms</div>
+        <div class="sl d">MIN:${min}ms  AVG:${avg}ms  MAX:${max}ms</div>
+        <div class="pw"><div class="pf" style="width:${Math.min(100,results[results.length-1]/5)}%"></div></div>
+        <div class="sl d" style="margin-top:2px">PINGS: ${results.length}</div>
+      `:'<div class="sl d">Press PING to test latency</div>'}
+      ${running?'<div class="sl d"><span class="bl">● PINGING...</span></div>':''}
+    </div>`;
+  };
+
+  render();clearCtx();
+
+  btn('PING',async()=>{
+    if(running)return;running=true;render();
+    const t0=performance.now();
+    try{
+      await fetch(targets[targetIdx].url,{mode:'no-cors',cache:'no-store'});
+      const ms=Math.round(performance.now()-t0);
+      results.push(ms);if(results.length>20)results.shift();
+      lp('G',150);vib(10);T('PING: '+ms+'ms');
+    }catch(e){
+      const ms=Math.round(performance.now()-t0);
+      results.push(ms);if(results.length>20)results.shift();
+      T('PING: '+ms+'ms');
+    }
+    running=false;render();
+  },'cg');
+
+  btn('LOOP',async()=>{
+    if(running)return;running=true;
+    for(let i=0;i<5;i++){
+      if(!running)break;
+      const t0=performance.now();
+      try{await fetch(targets[targetIdx].url,{mode:'no-cors',cache:'no-store'})}catch(e){}
+      const ms=Math.round(performance.now()-t0);
+      results.push(ms);if(results.length>20)results.shift();
+      lp('G',80);render();
+      await new Promise(r=>setTimeout(r,600));
+    }
+    running=false;render();T('LOOP DONE');
+  },'co');
+
+  btn('IP INFO',async()=>{
+    T('GETTING IP...');startLoad(2500);
+    const localIp=await getLocalIP();
+    T(localIp?'LOCAL: '+localIp:'COULD NOT GET IP');
+  },'cy');
+
+  btn('◄ TARGET',()=>{targetIdx=(targetIdx-1+targets.length)%targets.length;render()},'');
+  btn('TARGET ►',()=>{targetIdx=(targetIdx+1)%targets.length;render()},'');
+  btn('CLEAR',()=>{results=[];render()},'');
+
+  _H={ok:()=>document.querySelector('.cb.cg')?.click(),
+      lt:()=>{targetIdx=(targetIdx-1+targets.length)%targets.length;render()},
+      rt:()=>{targetIdx=(targetIdx+1)%targets.length;render()}};
+}
+
+/* ══════════════════════════════════
+   33. COLOR PICKER
+   HEX / RGB / HSL — visual swatch
+══════════════════════════════════ */
+function appColors(){
+  let h=220,s=80,l=55; // default blue
+
+  const hslToRgb=(h,s,l)=>{
+    s/=100;l/=100;
+    const k=n=>(n+h/30)%12;
+    const a=s*Math.min(l,1-l);
+    const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+    return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+  };
+
+  const toHex=(r,g,b)=>'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
+
+  const PALETTES=[
+    {n:'MATERIAL',colors:[{h:0,s:80,l:50},{h:45,s:80,l:50},{h:90,s:80,l:50},{h:135,s:80,l:50},{h:180,s:80,l:50},{h:225,s:80,l:50},{h:270,s:80,l:50},{h:315,s:80,l:50}]},
+    {n:'PASTEL',colors:[{h:0,s:60,l:75},{h:45,s:60,l:75},{h:90,s:60,l:75},{h:135,s:60,l:75},{h:180,s:60,l:75},{h:225,s:60,l:75},{h:270,s:60,l:75},{h:315,s:60,l:75}]},
+    {n:'NEON',colors:[{h:0,s:100,l:55},{h:45,s:100,l:55},{h:90,s:100,l:55},{h:135,s:100,l:55},{h:180,s:100,l:55},{h:225,s:100,l:55},{h:270,s:100,l:55},{h:315,s:100,l:55}]},
+  ];
+  const palette=[
+    {h:0,s:80,l:50},{h:30,s:90,l:50},{h:60,s:85,l:50},{h:120,s:70,l:40},
+    {h:180,s:75,l:45},{h:220,s:80,l:55},{h:270,s:75,l:55},{h:320,s:80,l:50},
+    {h:0,s:0,l:20},{h:0,s:0,l:40},{h:0,s:0,l:60},{h:0,s:0,l:80},
+  ];
+
+  const render=()=>{
+    const [r,g,b]=hslToRgb(h,s,l);
+    const hex=toHex(r,g,b);
+    const bg=`hsl(${h},${s}%,${l}%)`;
+    const fg=l>55?'#000':'#fff';
+    scr.innerHTML=`<div class="fi">
+      <div class="sl h" style="text-align:center">■ COLOR PICKER</div>
+      <div class="hr"></div>
+      <div style="width:100%;height:36px;background:${bg};border-radius:4px;display:flex;align-items:center;justify-content:center;position:relative;z-index:2">
+        <span style="font-family:var(--px);font-size:7px;color:${fg};text-shadow:0 1px 3px rgba(0,0,0,.3)">${hex}</span>
+      </div>
+      <div style="margin-top:4px;display:grid;grid-template-columns:repeat(4,1fr);gap:3px;position:relative;z-index:2">
+        ${palette.map(p=>{const[pr,pg,pb]=hslToRgb(p.h,p.s,p.l);const ph=toHex(pr,pg,pb);return `<div onclick="window._pickColor(${p.h},${p.s},${p.l})" style="height:16px;background:hsl(${p.h},${p.s}%,${p.l}%);border-radius:2px;cursor:pointer;border:${p.h===h&&p.s===s&&p.l===l?'2px solid #fff':'1px solid rgba(0,0,0,.2)'}"></div>`}).join('')}
+      </div>
+      <div class="hr"></div>
+      <div class="sl d">H:${h}° S:${s}% L:${l}%</div>
+      <div class="sl d">RGB: ${r},${g},${b}</div>
+    </div>`;
+    window._pickColor=(ph,ps,pl)=>{h=ph;s=ps;l=pl;render()};
+  };
+
+  render();clearCtx();
+  btn('H+',()=>{h=(h+15)%360;render()},'');
+  btn('H-',()=>{h=(h-15+360)%360;render()},'');
+  btn('S+',()=>{s=Math.min(100,s+10);render()},'cg');
+  btn('S-',()=>{s=Math.max(0,s-10);render()},'');
+  btn('L+',()=>{l=Math.min(95,l+10);render()},'co');
+  btn('L-',()=>{l=Math.max(5,l-10);render()},'');
+  btn('COPY HEX',()=>{const[r,g,b]=hslToRgb(h,s,l);navigator.clipboard?.writeText(toHex(r,g,b)).then(()=>T('HEX COPIED!'))},'cy');
+  btn('RANDOM',()=>{h=rand(0,360);s=rand(40,100);l=rand(35,70);render();T('RANDOM!')},'cp');
+  _H={
+    lt:()=>{h=(h-15+360)%360;render()},
+    rt:()=>{h=(h+15)%360;render()},
+    up:()=>{l=Math.min(95,l+10);render()},
+    dn:()=>{l=Math.max(5,l-10);render()},
+    ok:()=>{const[r,g,b]=hslToRgb(h,s,l);navigator.clipboard?.writeText(toHex(r,g,b)).then(()=>T('HEX COPIED!'))}
+  };
+}
 
 /* ── PWA ── */
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window._pwaP=e});
