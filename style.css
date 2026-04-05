@@ -1,39 +1,63 @@
-/* Reset default margins and set full height */
+/* Reset defaults and center everything */
 body {
     margin: 0;
     padding: 0;
     height: 100vh;
     width: 100vw;
-    background-color: #121212; /* Dark background */
-    font-family: Arial, sans-serif;
-    
-    /* This centers the button perfectly in the middle of the screen */
+    background-color: #1a1a1a; /* Dark background */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden; /* Prevents scrollbars from confetti */
 }
 
-/* Button Styling */
-#lolButton {
-    background-color: #ff0055; /* Bright Pink/Red */
+/* The Button */
+#pressButton {
+    background: linear-gradient(135deg, #6e8efb, #a777e3); /* Purple/Blue Gradient */
     color: white;
     border: none;
-    border-radius: 50px; /* Rounded pill shape */
+    border-radius: 50px;
     
-    /* Size of the button */
-    padding: 30px 60px;
-    font-size: 3rem; /* Big text */
-    font-weight: bold;
-    text-transform: uppercase;
+    /* Sizing */
+    padding: 40px 80px;
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 2px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
     
-    /* Animation for pressing down */
-    transition: transform 0.1s ease;
+    /* Shadow and Animation */
+    box-shadow: 0 10px 25px rgba(110, 142, 251, 0.5);
+    animation: pulse-animation 2s infinite;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 10; /* Ensures button is above confetti */
 }
 
-/* When the button is clicked (active state) */
-#lolButton:active {
-    transform: scale(0.95); /* Shrinks slightly */
-    background-color: #d40045;
+/* Animation Keyframes - Makes it glow and breathe */
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 0 0 0 rgba(167, 119, 227, 0.7);
+        transform: scale(1);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(167, 119, 227, 0);
+        transform: scale(1.02);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(167, 119, 227, 0);
+        transform: scale(1);
+    }
+}
+
+/* Hover Effect */
+#pressButton:hover {
+    transform: scale(1.05) translateY(-3px);
+    box-shadow: 0 15px 35px rgba(110, 142, 251, 0.6);
+}
+
+/* Active/Click Effect */
+#pressButton:active {
+    transform: scale(0.95);
+    box-shadow: 0 5px 15px rgba(110, 142, 251, 0.4);
 }
