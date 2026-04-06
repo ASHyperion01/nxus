@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Press Me</title>
+    <!-- Setting the title to 404 makes it look realistic in the browser tab -->
+    <title>404 Not Found</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Confetti Library -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
-    <!-- The Button -->
-    <button id="pressButton">Press Me</button>
-
-    <!-- The Fake Error Screen (Hidden by default) -->
-    <div id="crashScreen">
-        <span class="error-text">Err 404</span>
+    <!-- The Error Screen is visible immediately -->
+    <div id="errorScreen">
+        <div class="error-content">
+            <h1>Err 404</h1>
+            <p>Page not found</p>
+        </div>
     </div>
 
     <script src="script.js"></script>
