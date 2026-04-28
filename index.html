@@ -1,20 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aroma Eu - Perfume Shop</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CAM-LAG // N3XUS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="error-container">
-        <h1>Aroma Eu</h1>
-        <h2>Perfume shop</h2>
-        <p>Perfume shop</p>
-        <p class="small-text">Get scammed lol i have ur ip</p>
-    </div>
+<canvas id="cvs"></canvas>
 
-    <script src="script.js"></script>
+<div id="hud-top">
+  <div class="logo">N3XUS<em>.</em>CAM</div>
+  <div id="status">OFFLINE</div>
+</div>
+
+<div class="brk tl"></div>
+<div class="brk tr"></div>
+<div class="brk bl"></div>
+<div class="brk br"></div>
+
+<div id="lag-badge">1000ms</div>
+
+<div id="panel">
+  <div class="row">
+    <span class="lbl">DELAY</span>
+    <input type="range" id="slider" min="1" max="50" value="10">
+    <span class="val" id="valLabel">1.0s</span>
+  </div>
+  <div class="btns">
+    <button class="btn" id="btnFlip">FLIP CAM</button>
+    <button class="btn freeze" id="btnFreeze">FREEZE</button>
+    <button class="btn" id="btnHide">HIDE UI</button>
+  </div>
+  <div class="info-row">
+    <span>BUF: <span id="bufInfo">0</span> frames</span>
+    <span>FPS: <span id="fpsInfo">0</span></span>
+    <span id="camLabel">REAR</span>
+  </div>
+</div>
+
+<div id="overlay">
+  <h1>CAM-LAG</h1>
+  <p>REAL-TIME CAMERA DELAY<br>100ms — 5 SECONDS</p>
+  <button id="startBtn">[ INITIALIZE ]</button>
+  <div id="errMsg"></div>
+</div>
+
+<video id="vid" autoplay playsinline muted></video>
+
+<script src="script.js"></script>
 </body>
 </html>
