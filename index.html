@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Network Scanner - Windows XP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="xp-window" id="mainWindow">
+
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <img class="tb-icon" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='3' width='14' height='10' rx='1' fill='%23fff' stroke='%23aac' stroke-width='1'/%3E%3Crect x='3' y='5' width='10' height='6' fill='%23b8d4f0'/%3E%3Crect x='5' y='11' width='6' height='1' fill='%23999'/%3E%3Crect x='4' y='12' width='8' height='1' fill='%23bbb'/%3E%3C/svg%3E" alt="">
+    <span class="tb-text">Network Scanner &mdash; All Devices</span>
+    <div class="tb-btn tb-min" title="Minimize">_</div>
+    <div class="tb-btn tb-max" title="Maximize">&#9645;</div>
+    <div class="tb-btn tb-close" title="Close" onclick="document.body.style.opacity='0.3'">X</div>
+  </div>
+
+  <!-- Menu Bar -->
+  <div class="menu-bar">
+    <div class="menu-item" tabindex="0">File</div>
+    <div class="menu-item" tabindex="0">View</div>
+    <div class="menu-item" tabindex="0">Scan</div>
+    <div class="menu-item" tabindex="0">Filter</div>
+    <div class="menu-item" tabindex="0">Tools</div>
+    <div class="menu-item" tabindex="0">Help</div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="tool-btn" onclick="startScan()" title="Scan network for all devices">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#555" stroke-width="1.5"/><path d="M5 12a7 7 0 017-7" stroke="#0055C8" stroke-width="2" stroke-linecap="round"/><path d="M7.5 12a4.5 4.5 0 014.5-4.5" stroke="#0055C8" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.5" fill="#0055C8"/><path d="M15 9l4-4M15 9h3M15 9v-3" stroke="#0055C8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span>Scan</span>
+    </div>
+    <div class="tool-btn" id="stopBtn" onclick="stopScan()" style="opacity:.4;pointer-events:none" title="Stop scanning">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="#CC0000"/></svg>
+      </div>
+      <span>Stop</span>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn active-filter" id="filter-all" onclick="setFilter('all')" title="Show all devices">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1" stroke="#555" stroke-width="1.5"/><rect x="13" y="3" width="8" height="8" rx="1" stroke="#555" stroke-width="1.5"/><rect x="3" y="13" width="8" height="8" rx="1" stroke="#555" stroke-width="1.5"/><rect x="13" y="13" width="8" height="8" rx="1" stroke="#555" stroke-width="1.5"/></svg>
+      </div>
+      <span>All</span>
+    </div>
+    <div class="tool-btn" id="filter-wifi" onclick="setFilter('wifi')" title="Show WiFi networks only">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 8.5A13 13 0 0121 8.5" stroke="#555" stroke-width="1.8" stroke-linecap="round"/><path d="M6.5 12a8 8 0 0111 0" stroke="#555" stroke-width="1.8" stroke-linecap="round"/><path d="M10 15.5a3 3 0 014 0" stroke="#555" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="19" r="1.2" fill="#555"/></svg>
+      </div>
+      <span>WiFi</span>
+    </div>
+    <div class="tool-btn" id="filter-camera" onclick="setFilter('camera')" title="Show cameras only">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="16" height="12" rx="2" stroke="#555" stroke-width="1.5"/><path d="M18 10l4-2v8l-4-2V10z" stroke="#555" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="13" r="3" stroke="#555" stroke-width="1.5"/></svg>
+      </div>
+      <span>Cameras</span>
+    </div>
+    <div class="tool-btn" id="filter-computer" onclick="setFilter('computer')" title="Show computers only">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="#555" stroke-width="1.5"/><path d="M8 21h8M12 17v4" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span>PCs</span>
+    </div>
+    <div class="tool-btn" id="filter-iot" onclick="setFilter('iot')" title="Show IoT/smart devices">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#555" stroke-width="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M4.9 19.1l2.1-2.1M16.9 7.1l2.1-2.1" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span>IoT</span>
+    </div>
+    <div class="tool-btn" id="filter-other" onclick="setFilter('other')" title="Show other devices">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#555" stroke-width="1.5"/><path d="M3 10h18" stroke="#555" stroke-width="1.5"/><circle cx="7" cy="8" r="1" fill="#555"/><circle cx="11" cy="8" r="1" fill="#555"/></svg>
+      </div>
+      <span>Other</span>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-btn" onclick="exportCSV()" title="Export device list to CSV">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#555" stroke-width="1.5"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span>Export</span>
+    </div>
+    <div class="tool-btn" onclick="startScan()" title="Refresh / rescan">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 018-8c2.5 0 4.7 1.1 6.2 2.8L21 4v6h-6l2.2-2.2A6 6 0 006 12" stroke="#555" stroke-width="1.5" stroke-linecap="round"/><path d="M20 12a8 8 0 01-14.2 5.2L3 20v-6h6l-2.2 2.2A6 6 0 0018 12" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span>Refresh</span>
+    </div>
+    <div class="tool-sep"></div>
+    <!-- Search box -->
+    <div class="search-box">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="#888" stroke-width="1.5"/><path d="M10 10l3 3" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input type="text" id="searchInput" placeholder="Search devices..." oninput="applySearch()">
+    </div>
+  </div>
+
+  <!-- Status Message -->
+  <div class="status-msg" id="statusMsg">
+    <div class="status-icon" id="statusIcon">
+      <svg viewBox="0 0 20 20" fill="none"><rect x="1" y="1" width="18" height="18" rx="2" stroke="#1452A8" stroke-width="1.5"/><circle cx="10" cy="10" r="4" stroke="#1452A8" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="#1452A8" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div id="statusText">Click <strong>Scan</strong> to discover all devices on your network.</div>
+    <div class="progress-bar" id="progressBar" style="display:none">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+
+    <!-- Left Task Panel -->
+    <div class="task-panel">
+      <div class="task-section-title">Network Tasks</div>
+      <div class="task-link" onclick="startScan()">Scan for devices</div>
+      <div class="task-link" onclick="setFilter('all')">View all devices</div>
+      <div class="task-link" onclick="setFilter('camera')">View cameras</div>
+      <div class="task-link" onclick="setFilter('wifi')">View WiFi networks</div>
+      <div class="task-link" onclick="setFilter('computer')">View computers</div>
+      <div class="task-link" onclick="exportCSV()">Export to CSV</div>
+
+      <div class="task-section-title" style="margin-top:8px">Device Categories</div>
+      <div class="task-link" onclick="setFilter('wifi')">WiFi Networks</div>
+      <div class="task-link" onclick="setFilter('camera')">IP Cameras</div>
+      <div class="task-link" onclick="setFilter('computer')">Computers / PCs</div>
+      <div class="task-link" onclick="setFilter('router')">Routers / APs</div>
+      <div class="task-link" onclick="setFilter('nas')">NAS / Storage</div>
+      <div class="task-link" onclick="setFilter('printer')">Printers / MFP</div>
+      <div class="task-link" onclick="setFilter('iot')">Smart Home / IoT</div>
+      <div class="task-link" onclick="setFilter('phone')">Phones / Tablets</div>
+      <div class="task-link" onclick="setFilter('tv')">TVs / Media</div>
+      <div class="task-link" onclick="setFilter('voip')">VoIP / Phones</div>
+      <div class="task-link" onclick="setFilter('switch')">Switches / Hubs</div>
+      <div class="task-link" onclick="setFilter('server')">Servers</div>
+      <div class="task-link" onclick="setFilter('dvr')">DVR / NVR</div>
+      <div class="task-link" onclick="setFilter('game')">Game Consoles</div>
+      <div class="task-link" onclick="setFilter('ups')">UPS / Power</div>
+      <div class="task-link" onclick="setFilter('industrial')">Industrial / PLC</div>
+      <div class="task-link" onclick="setFilter('medical')">Medical Devices</div>
+
+      <div class="task-section-title" style="margin-top:8px">See Also</div>
+      <div class="task-link">Network Center</div>
+      <div class="task-link">Firewall Settings</div>
+      <div class="task-link">Port Scanner</div>
+      <div class="task-link">Whois Lookup</div>
+    </div>
+
+    <!-- Right Device Area -->
+    <div class="device-area">
+      <div class="device-header" id="devHeader">Select a category or scan the network</div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <div class="tab active" id="tab-list" onclick="switchTab('list')">List View</div>
+        <div class="tab" id="tab-details" onclick="switchTab('details')">Details</div>
+        <div class="tab" id="tab-stats" onclick="switchTab('stats')">Statistics</div>
+      </div>
+
+      <!-- List view -->
+      <div id="view-list">
+        <div class="device-list" id="deviceList">
+          <div class="empty-msg">No devices found. Press Scan to start discovery.</div>
+        </div>
+      </div>
+
+      <!-- Details view -->
+      <div id="view-details" style="display:none">
+        <div class="details-view" id="detailsView">
+          <div class="empty-msg">Select a device from the list to view details.</div>
+        </div>
+      </div>
+
+      <!-- Stats view -->
+      <div id="view-stats" style="display:none">
+        <div class="stats-view" id="statsView">
+          <div class="empty-msg">Run a scan to view statistics.</div>
+        </div>
+      </div>
+
+      <!-- Info panel when device selected -->
+      <div class="info-panel" id="infoPanel">
+        <div class="info-panel-header">
+          <span id="infoPanelTitle">Device Properties</span>
+          <div class="xp-btn" onclick="closeInfo()">Close</div>
+        </div>
+        <div class="info-grid" id="infoGrid"></div>
+        <div class="info-actions">
+          <div class="xp-btn">Ping</div>
+          <div class="xp-btn">Traceroute</div>
+          <div class="xp-btn">Port Scan</div>
+          <div class="xp-btn">Wake on LAN</div>
+          <div class="xp-btn primary">Open in Browser</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar-bottom">
+    <div class="sbb-left">
+      <div class="led" id="ledDot"></div>
+      <span id="ledLabel">Not connected</span>
+    </div>
+    <div class="sbb-mid" id="scanPhase"></div>
+    <div class="sbb-right" id="devCount">Devices: --</div>
+  </div>
+
+</div><!-- end xp-window -->
+
+<script src="script.js"></script>
+</body>
+</html>
